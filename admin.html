@@ -555,9 +555,17 @@
           return
         }
 
+        // Assign court numbers per pool, sequential order
+        const courtByPool = {}
+        matches.forEach(m => {
+          courtByPool[m.bracket] = (courtByPool[m.bracket] || 0) + 1
+          m._court = courtByPool[m.bracket]
+        })
+
         div.innerHTML = `<table>
           <thead>
             <tr>
+              <th>Court</th>
               <th>Pool</th>
               <th>Team 1</th>
               <th style="width:64px;text-align:center">Score</th>
@@ -573,6 +581,7 @@
               const poolColor = m.bracket === 'A' ? 'var(--accent)' : '#e67e22'
               const poolBg = m.bracket === 'A' ? '#deeef8' : '#fde8d0'
               return `<tr>
+                <td style="font-weight:700;color:#555">Court ${m._court}</td>
                 <td><span style="background:${poolBg};color:${poolColor};border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">Pool ${esc(m.bracket)}</span></td>
                 <td style="font-weight:600">${esc(m.team1?.name || '?')}</td>
                 <td style="text-align:center">
