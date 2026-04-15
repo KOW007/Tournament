@@ -139,7 +139,7 @@
     <div class="panel" id="panel-pool-play">
 
       <!-- Create schedule -->
-      <div class="card">
+      <div class="card" id="poolCreateCard">
         <h2 style="font-size:16px;margin-bottom:.5rem">Create Pool Play Schedule</h2>
         <p style="font-size:13px;color:#888;margin-bottom:1.25rem">
           Randomly splits all registered teams into <strong>Pool A</strong> and <strong>Pool B</strong>, then generates a round-robin schedule within each pool using the circle method. With 26 teams (13 per pool) and 6 courts per pool, 6 rounds guarantees every team plays 5–6 games. <strong>This closes registration.</strong>
@@ -438,6 +438,10 @@
         const data = await fetch('/api/schedule').then(r => r.json())
         const matches = data.matches || []
         const standings = data.standings || {}
+
+        // Show/hide create card based on whether schedule exists
+        const createCard = document.getElementById('poolCreateCard')
+        if (createCard) createCard.style.display = matches.length ? 'none' : ''
 
         // Populate round selectors
         const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b)
