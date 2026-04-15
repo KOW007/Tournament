@@ -51,7 +51,7 @@
     <h1><img id="eventLogo" src="/pickleball_logo.jpg" alt="" /><span id="eventName">2026 Pickleball Tournament</span></h1>
     <nav>
       <a href="/">Register</a>
-      <a href="/bracket.html">Bracket</a>
+      <a href="/bracket.html" id="navStandings">Bracket</a>
       <a href="/admin.html" style="font-size:11px;opacity:0.5">Admin</a>
     </nav>
   </header>
@@ -141,6 +141,14 @@
         document.getElementById('eventName').textContent = cfg.eventName
         if (cfg.logo) { const img = document.getElementById('eventLogo'); img.src = cfg.logo; img.style.display = '' }
         if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+        const navStandings = document.getElementById('navStandings')
+        if (cfg.tournamentFormat === 'pool_play') {
+          navStandings.href = '/roundrobin.html'
+          navStandings.textContent = 'Standings'
+        } else {
+          navStandings.href = '/bracket.html'
+          navStandings.textContent = 'Bracket'
+        }
       } catch (e) {}
     }
 
