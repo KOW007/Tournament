@@ -555,12 +555,9 @@
           return
         }
 
-        // Assign court numbers per pool, sequential order
-        const courtByPool = {}
-        matches.forEach(m => {
-          courtByPool[m.bracket] = (courtByPool[m.bracket] || 0) + 1
-          m._court = courtByPool[m.bracket]
-        })
+        // Assign court numbers globally across both pools (Pool A first, then Pool B)
+        matches.sort((a, b) => a.bracket.localeCompare(b.bracket) || a.position - b.position)
+        matches.forEach((m, i) => { m._court = i + 1 })
 
         div.innerHTML = `<table>
           <thead>

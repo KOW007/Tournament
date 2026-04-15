@@ -57,12 +57,14 @@ module.exports = async function handler(req, res) {
     if (!matches?.length) return res.status(400).json({ error: `No matches found for round ${round}.` })
 
     const results = { sent: 0, failed: 0, skipped: 0, sentList: [], failedList: [] }
-    const courtByPool = {}
+
+    // Assign court numbers globally across both pools (Pool A first, then Pool B)
+    matches.sort((a, b) => a.bracket.localeCompare(b.bracket) || a.position - b.position)
+    matches.forEach((m, i) => { m._court = i + 1 })
 
     for (const m of matches) {
       const pool = m.bracket
-      courtByPool[pool] = (courtByPool[pool] || 0) + 1
-      const court = courtByPool[pool]
+      const court = m._court
 
       const isPoolPlay = pool === 'A' || pool === 'B'
       const link = `${baseUrl}/score?t=${m.token}`
