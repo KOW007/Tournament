@@ -100,7 +100,7 @@
       <div class="card">
         <h2 style="font-size:16px;margin-bottom:.5rem">Send Payment Request</h2>
         <p style="font-size:13px;color:#888;margin-bottom:1.25rem">
-          Sends a text to all registered teams with a Venmo payment link for the $40 entry fee.
+          <span id="notifyDesc"></span>
         </p>
         <div style="background:#f0f4f8;border-radius:8px;padding:12px;font-size:13px;color:#555;margin-bottom:1.25rem">
           <strong>Message preview:</strong><br/>
@@ -248,6 +248,9 @@
         document.getElementById('tab-pool-play').style.display = isPoolPlay ? '' : 'none'
         const fee = cfg.entryFee || 0
         const standingsUrl = cfg.tournamentFormat === 'pool_play' ? '/roundrobin.html' : '/bracket.html'
+        document.getElementById('notifyDesc').textContent = fee > 0
+          ? `Sends a text to all registered teams with a Venmo payment link for the $${fee} entry fee.`
+          : 'Sends a text to all registered teams with a link to follow the standings. No payment info is included since entry is free.'
         const preview = fee > 0
           ? `Hi! You're registered for the ${cfg.eventName}. Entry fee is $${fee}/team ($${Math.round(fee/2)}/person). Please pay via Venmo: ${cfg.venmoHandle ? `venmo.com/${cfg.venmoHandle}` : '(Venmo not configured)'}`
           : `Hi! You're registered for the ${cfg.eventName}. Entry is free — follow the standings here: [standings link]`
