@@ -216,7 +216,7 @@
 
       <!-- Reset -->
       <div class="card danger-zone">
-        <p><strong>Reset pool play:</strong> Deletes all pool matches and pool assignments. Registration stays open.</p>
+        <p><strong>Reset pool play:</strong> Deletes all pool matches and pool assignments. Registration stays open and no teams will be deleted.</p>
         <button class="btn btn-danger" onclick="resetPoolPlay()">Reset Pool Play</button>
         <div class="msg" id="poolResetMsg"></div>
       </div>
@@ -718,13 +718,12 @@
       div.innerHTML = `<table>
         <thead><tr><th>Match</th><th>Winner</th><th>Score</th><th>Loser</th></tr></thead>
         <tbody>${done.map(m => {
-          const bracketLabel = m.bracket === 'W' ? 'Main' : 'Consolation'
           const winner = m.winner_id === m.team1_id ? m.team1 : m.team2
           const loser  = m.winner_id === m.team1_id ? m.team2 : m.team1
           const s1 = m.winner_id === m.team1_id ? m.score1 : m.score2
           const s2 = m.winner_id === m.team1_id ? m.score2 : m.score1
           return `<tr>
-            <td style="font-weight:600">${bracketLabel} R${m.round} #${m.position+1}</td>
+            <td style="font-weight:600">R${m.round} #${m.position+1}</td>
             <td style="font-weight:600;color:#2d6a2d">${esc(winner?.name)}</td>
             <td>${s1} – ${s2}</td>
             <td style="color:#888">${esc(loser?.name)}</td>
