@@ -90,6 +90,12 @@
               <label>Phone Number</label>
               <input id="phone" type="tel" placeholder="e.g. 512-555-1234" maxlength="20" />
             </div>
+            <div class="form-row" style="display:flex;align-items:flex-start;gap:10px">
+              <input id="smsConsent" type="checkbox" style="width:auto;margin-top:2px;flex-shrink:0" />
+              <label for="smsConsent" style="font-size:12px;font-weight:400;color:#555;cursor:pointer;margin:0">
+                I agree to receive text messages about this tournament on the phone number provided. Message and data rates may apply.
+              </label>
+            </div>
             <button class="btn btn-primary" id="registerBtn" onclick="register()">Register Team</button>
             <div class="msg" id="regMsg"></div>
           </div>
@@ -190,6 +196,9 @@
       if (digits.length !== 10 && !(digits.length === 11 && digits[0] === '1')) {
         msg.className = 'msg error'; msg.textContent = 'Please enter a valid 10-digit US phone number.'; return
       }
+      if (!document.getElementById('smsConsent').checked) {
+        msg.className = 'msg error'; msg.textContent = 'Please agree to receive text messages to complete registration.'; return
+      }
 
       btn.disabled = true; msg.textContent = ''
 
@@ -216,6 +225,7 @@
           document.getElementById('player2').value = ''
           document.getElementById('phone').value = ''
           document.getElementById('partnerStatus').value = 'has_partner'
+          document.getElementById('smsConsent').checked = false
           togglePlayer2()
           loadTeams()
         }
