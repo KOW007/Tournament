@@ -330,7 +330,7 @@
       }
       if (data.failedList?.length) {
         results.innerHTML += '<p style="font-size:12px;font-weight:600;margin:10px 0 6px;color:#c0392b">Failed:</p>' +
-          data.failedList.map(t => `<div style="font-size:12px;color:#c0392b;padding:4px 0">${esc(t.name)} — ${esc(t.phone)}</div>`).join('')
+          data.failedList.map(t => `<div style="font-size:12px;color:#c0392b;padding:4px 0">${esc(t.name)} — ${esc(t.phone)}${t.error ? ` (${esc(t.error)})` : ''}</div>`).join('')
       }
     }
 
@@ -675,7 +675,7 @@
       }
       if (data.failedList?.length) {
         results.innerHTML += '<p style="font-weight:600;color:#c0392b;margin:8px 0 4px">Failed:</p>' +
-          data.failedList.map(t => `<div style="color:#c0392b;padding:2px 0">${esc(t.name)} — ${esc(t.phone)}</div>`).join('')
+          data.failedList.map(t => `<div style="color:#c0392b;padding:2px 0">${esc(t.name)} — ${esc(t.phone)}${t.error ? ` (${esc(t.error)})` : ''}</div>`).join('')
       }
     }
 

@@ -21,9 +21,9 @@ async function sendText(phone, message) {
       })
     })
     const data = await r.json()
-    return data.success === true
+    return { ok: data.success === true, error: data.error || data.message || null, quotaRemaining: data.quotaRemaining }
   } catch (e) {
-    return false
+    return { ok: false, error: e.message }
   }
 }
 
@@ -74,9 +74,9 @@ module.exports = async function handler(req, res) {
           ? `Pool ${pool} · Court ${court}`
           : `Court ${court}`
         const msg = `${eventName} – Round ${round}\n${locationLine}\nvs ${opponent}\nSubmit score: ${link}`
-        const ok = await sendText(team.phone, msg)
-        if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone }) }
-        else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone }) }
+        const { ok, error: textErr, quotaRemaining } = await sendText(team.phone, msg)
+        if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone, quotaRemaining }) }
+        else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone, error: textErr }) }
       }
     }
 
@@ -103,9 +103,9 @@ module.exports = async function handler(req, res) {
       if (!team?.phone) { results.skipped++; continue }
       const opponent = team.id === champMatch.team1_id ? champMatch.team2?.name : champMatch.team1?.name
       const msg = `${eventName} – CHAMPIONSHIP\nvs ${opponent}\nSubmit your score: ${link}`
-      const ok = await sendText(team.phone, msg)
-      if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone }) }
-      else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone }) }
+      const { ok, error: textErr, quotaRemaining } = await sendText(team.phone, msg)
+      if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone, quotaRemaining }) }
+      else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone, error: textErr }) }
     }
     return res.json({ success: true, ...results })
   }
@@ -128,9 +128,9 @@ module.exports = async function handler(req, res) {
 
   for (const team of targetTeams) {
     if (!team.phone) { results.skipped++; continue }
-    const ok = await sendText(team.phone, message)
-    if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone }) }
-    else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone }) }
+    const { ok, error: textErr, quotaRemaining } = await sendText(team.phone, message)
+    if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone, quotaRemaining }) }
+    else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone, error: textErr }) }
   }
 
   return res.json({ success: true, ...results })

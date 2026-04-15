@@ -33,6 +33,9 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Team name, player name, and phone number are required.' })
     if (partner_status === 'has_partner' && !player2?.trim())
       return res.status(400).json({ error: 'Please enter your partner\'s name.' })
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length !== 10 && !(digits.length === 11 && digits[0] === '1'))
+      return res.status(400).json({ error: 'Please enter a valid 10-digit US phone number.' })
 
     const { count } = await supabase
       .from(`${T}_teams`).select('*', { count: 'exact', head: true })

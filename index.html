@@ -186,6 +186,10 @@
       if (partnerStatus === 'has_partner' && !p2) {
         msg.className = 'msg error'; msg.textContent = 'Please enter your partner\'s name.'; return
       }
+      const digits = phone.replace(/\D/g, '')
+      if (digits.length !== 10 && !(digits.length === 11 && digits[0] === '1')) {
+        msg.className = 'msg error'; msg.textContent = 'Please enter a valid 10-digit US phone number.'; return
+      }
 
       btn.disabled = true; msg.textContent = ''
 
