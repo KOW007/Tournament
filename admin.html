@@ -83,7 +83,7 @@
       <div class="tab" onclick="showTab('notify')">Send Texts</div>
       <div class="tab" onclick="showTab('bracket')">Create Bracket</div>
       <div class="tab" onclick="showTab('scores')">View Scores</div>
-      <div class="tab" onclick="showTab('view-bracket')">View Bracket</div>
+      <div class="tab" onclick="showTab('view-bracket')">View Standings</div>
       <div class="tab" onclick="showTab('pool-play')">Pool Play</div>
     </div>
 
@@ -132,7 +132,7 @@
 
     <!-- View Bracket panel -->
     <div class="panel" id="panel-view-bracket">
-      <iframe src="/bracket.html?mode=admin" style="width:100%;height:80vh;border:none;border-radius:8px"></iframe>
+      <iframe id="bracketIframe" src="" style="width:100%;height:80vh;border:none;border-radius:8px"></iframe>
     </div>
 
     <!-- Pool Play panel -->
@@ -288,8 +288,11 @@
       if (name === 'bracket') updateBracketSizeNote()
       if (name === 'scores') loadScores()
       if (name === 'view-bracket') {
-        const iframe = document.querySelector('#panel-view-bracket iframe')
-        iframe.src = iframe.src  // force reload
+        const iframe = document.getElementById('bracketIframe')
+        fetch('/api/schedule').then(r => r.json()).then(data => {
+          const isPoolPlay = (data.matches || []).some(m => m.bracket === 'A' || m.bracket === 'B')
+          iframe.src = isPoolPlay ? '/roundrobin.html' : '/bracket.html?mode=admin'
+        }).catch(() => { iframe.src = '/bracket.html?mode=admin' })
       }
       if (name === 'pool-play') loadPoolPlayPanel()
     }
