@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js')
+const crypto = require('crypto')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -6,6 +7,10 @@ const supabase = createClient(
 )
 
 const T = process.env.TABLE_PREFIX || 'ct'
+
+function generateToken() {
+  return crypto.randomBytes(8).toString('hex')
+}
 
 function getBracketSize(teamCount) {
   const sizes = [8, 16, 32, 64, 128]
@@ -57,7 +62,7 @@ function buildMatchStructure(bracketSize) {
         id: wb[r][p], bracket: 'W', round: r, position: p,
         team1_id: null, team2_id: null, score1: null, score2: null, winner_id: null,
         next_match_id, next_slot, loser_next_match_id, loser_next_slot,
-        status: 'pending', is_bye: false
+        status: 'pending', is_bye: false, token: generateToken()
       })
     }
   }
@@ -72,7 +77,7 @@ function buildMatchStructure(bracketSize) {
         id: lb[r][p], bracket: 'L', round: r, position: p,
         team1_id: null, team2_id: null, score1: null, score2: null, winner_id: null,
         next_match_id, next_slot, loser_next_match_id: null, loser_next_slot: null,
-        status: 'pending', is_bye: false
+        status: 'pending', is_bye: false, token: generateToken()
       })
     }
   }

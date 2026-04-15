@@ -1,7 +1,12 @@
 const { createClient } = require('@supabase/supabase-js')
+const crypto = require('crypto')
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 const T = process.env.TABLE_PREFIX || 'ct'
+
+function generateToken() {
+  return crypto.randomBytes(8).toString('hex')
+}
 
 function shuffle(arr) {
   const a = [...arr]
@@ -117,7 +122,8 @@ module.exports = async function handler(req, res) {
             loser_next_match_id: null,
             loser_next_slot: null,
             status: isBye ? 'complete' : 'pending',
-            is_bye: isBye
+            is_bye: isBye,
+            token: generateToken()
           })
         })
       })

@@ -183,6 +183,23 @@
         </div>
       </div>
 
+      <!-- Text round links -->
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:.5rem">Text Score Links to Teams</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:1.25rem">
+          Sends each team a text with their court and a personal link to submit their own score. Requires <strong>TEXTBELT_KEY</strong> env var in Vercel.
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+          <label style="margin:0;white-space:nowrap;font-size:13px;font-weight:600;color:#555">Round:</label>
+          <select id="textRound" style="width:auto;min-width:130px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:white">
+            <option>— no schedule yet —</option>
+          </select>
+          <button class="btn btn-primary" style="font-size:13px;padding:8px 18px" onclick="textRoundLinks()">Send Texts</button>
+        </div>
+        <div class="msg" id="textRoundMsg"></div>
+        <div id="textRoundResults" style="margin-top:.75rem;font-size:12px"></div>
+      </div>
+
       <!-- Reset -->
       <div class="card danger-zone">
         <p><strong>Reset pool play:</strong> Deletes all pool matches and pool assignments. Registration stays open.</p>
@@ -403,14 +420,18 @@
         const matches = data.matches || []
         const standings = data.standings || {}
 
-        // Populate round selector
+        // Populate round selectors
         const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b)
+        const roundOptions = rounds.length
+          ? rounds.map(r => `<option value="${r}">Round ${r}</option>`).join('')
+          : '<option>— no schedule yet —</option>'
         const sel = document.getElementById('scoreRound')
+        const textSel = document.getElementById('textRound')
+        if (sel) sel.innerHTML = roundOptions
+        if (textSel) textSel.innerHTML = roundOptions
         if (rounds.length) {
-          sel.innerHTML = rounds.map(r => `<option value="${r}">Round ${r}</option>`).join('')
           loadRoundScores()
         } else {
-          sel.innerHTML = '<option>— no schedule yet —</option>'
           document.getElementById('roundScoreTable').textContent = 'Generate a schedule first.'
         }
 
@@ -557,6 +578,33 @@
       const data = await res.json()
       if (!res.ok) { alert(data.error || 'Error saving score.'); return }
       loadRoundScores()
+    }
+
+    async function textRoundLinks() {
+      const round = parseInt(document.getElementById('textRound').value)
+      if (isNaN(round)) { alert('Select a round first.'); return }
+      if (!confirm(`Send score links to all teams playing in Round ${round}?`)) return
+      const msg = document.getElementById('textRoundMsg')
+      const results = document.getElementById('textRoundResults')
+      msg.className = 'msg'; msg.textContent = 'Sending texts...'
+      results.innerHTML = ''
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ action: 'round', round })
+      })
+      const data = await res.json()
+      if (!res.ok) { msg.className = 'msg error'; msg.textContent = data.error; return }
+      msg.className = 'msg success'
+      msg.textContent = `✓ Sent: ${data.sent} | Failed: ${data.failed} | Skipped (no phone): ${data.skipped}`
+      if (data.sentList?.length) {
+        results.innerHTML = '<p style="font-weight:600;margin-bottom:4px">Sent to:</p>' +
+          data.sentList.map(t => `<div style="padding:2px 0;border-bottom:1px solid #f0f0f0">${esc(t.name)} — ${esc(t.phone)}</div>`).join('')
+      }
+      if (data.failedList?.length) {
+        results.innerHTML += '<p style="font-weight:600;color:#c0392b;margin:8px 0 4px">Failed:</p>' +
+          data.failedList.map(t => `<div style="color:#c0392b;padding:2px 0">${esc(t.name)} — ${esc(t.phone)}</div>`).join('')
+      }
     }
 
     async function resetPoolPlay() {

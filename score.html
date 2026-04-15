@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enter Score</title>
+  <style>
+    :root { --accent: #3a8fc1; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+    header { background: #0f0f0f; color: white; padding: 0 1.5rem; height: 56px; display: flex; align-items: center; gap: 10px; }
+    header img { height: 36px; width: auto; }
+    header span { font-size: 16px; font-weight: 700; }
+
+    .page { max-width: 480px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .card { background: white; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 1.75rem 1.5rem; }
+
+    .match-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: #888; margin-bottom: 1.5rem; text-align: center;
+    }
+
+    .score-grid {
+      display: grid; grid-template-columns: 1fr 40px 1fr;
+      align-items: center; gap: 10px; margin-bottom: 1.75rem;
+    }
+    .team-col { text-align: center; }
+    .team-name {
+      font-size: 15px; font-weight: 700; line-height: 1.3;
+      margin-bottom: 12px; min-height: 40px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .score-input {
+      width: 100%; text-align: center; font-size: 42px; font-weight: 800;
+      padding: 14px 6px; border: 2px solid #ddd; border-radius: 10px;
+      outline: none; background: #fafafa;
+      -moz-appearance: textfield; appearance: textfield;
+    }
+    .score-input::-webkit-inner-spin-button,
+    .score-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .score-input:focus { border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(58,143,193,.15); }
+    .vs { text-align: center; font-size: 14px; font-weight: 700; color: #ccc; padding-top: 52px; }
+
+    .btn-submit {
+      width: 100%; padding: 17px; background: var(--accent); color: white;
+      border: none; border-radius: 10px; font-size: 17px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+    }
+    .btn-submit:hover { background: #2a7aaa; }
+    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+    .error-msg { color: #c0392b; font-size: 14px; text-align: center; margin-top: 12px; min-height: 20px; }
+
+    .recorded-box {
+      background: #f0f9f0; border: 1.5px solid #b7ddb7;
+      border-radius: 10px; padding: 1.5rem; text-align: center; margin-top: 1rem;
+    }
+    .recorded-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #2d6a2d; margin-bottom: .5rem; }
+    .recorded-score { font-size: 48px; font-weight: 800; color: #1a1a1a; letter-spacing: -1px; }
+    .recorded-winner { font-size: 14px; font-weight: 600; color: #2d6a2d; margin-top: .25rem; }
+    .recorded-note { font-size: 12px; color: #aaa; margin-top: .75rem; }
+
+    .bye-box { text-align: center; padding: 1.5rem 0; }
+    .bye-icon { font-size: 40px; margin-bottom: .75rem; }
+    .bye-text { font-size: 16px; font-weight: 600; margin-bottom: .5rem; }
+    .bye-sub { font-size: 13px; color: #888; }
+
+    .loading { text-align: center; padding: 3rem 1rem; color: #aaa; font-size: 15px; }
+    .error-page { text-align: center; padding: 2rem 1rem; }
+    .error-page h2 { color: #c0392b; font-size: 20px; margin-bottom: .5rem; }
+    .error-page p { color: #888; font-size: 14px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <img id="headerLogo" src="/pickleball_logo.jpg" alt="" />
+    <span id="headerName">Tournament</span>
+  </header>
+
+  <div class="page">
+    <div class="card" id="content">
+      <div class="loading">Loading your match...</div>
+    </div>
+  </div>
+
+  <script>
+    const token = new URLSearchParams(location.search).get('t')
+
+    function esc(s) {
+      if (!s) return ''
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
+
+    async function applyConfig() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json())
+        document.getElementById('headerName').textContent = cfg.eventName
+        document.title = 'Enter Score — ' + cfg.eventName
+        if (cfg.logo) document.getElementById('headerLogo').src = cfg.logo
+        if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+      } catch (e) {}
+    }
+
+    function matchLabel(match, format) {
+      const r = `Round ${match.round}`
+      if (format === 'pool_play') return `Pool ${match.bracket} · ${r}`
+      if (match.bracket === 'W') return `${r} · Main Bracket`
+      if (match.bracket === 'L') return `${r} · Consolation`
+      return r
+    }
+
+    async function load() {
+      if (!token) {
+        document.getElementById('content').innerHTML = `
+          <div class="error-page">
+            <h2>Invalid Link</h2>
+            <p>This score link is missing or broken. Check your text message for the correct link.</p>
+          </div>`
+        return
+      }
+
+      let data
+      try {
+        const res = await fetch('/api/score?t=' + encodeURIComponent(token))
+        data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+      } catch (e) {
+        document.getElementById('content').innerHTML = `
+          <div class="error-page">
+            <h2>Match Not Found</h2>
+            <p>${esc(e.message || 'This link may be invalid or expired.')}</p>
+          </div>`
+        return
+      }
+
+      const { match, format } = data
+
+      // Bye round
+      if (match.is_bye || !match.team2_id) {
+        document.getElementById('content').innerHTML = `
+          <div class="match-label">${esc(matchLabel(match, format))}</div>
+          <div class="bye-box">
+            <div class="bye-icon">🏖️</div>
+            <div class="bye-text">${esc(match.team1?.name)}</div>
+            <div class="bye-sub">You have a bye this round — enjoy the break!</div>
+          </div>`
+        return
+      }
+
+      // Already scored
+      if (match.status === 'complete' && match.score1 != null) {
+        const t1wins = match.winner_id === match.team1_id
+        const winnerName = t1wins ? match.team1?.name : match.team2?.name
+        document.getElementById('content').innerHTML = `
+          <div class="match-label">${esc(matchLabel(match, format))}</div>
+          <div style="text-align:center;margin-bottom:1.25rem;font-size:13px;color:#555">
+            ${esc(match.team1?.name)} vs ${esc(match.team2?.name)}
+          </div>
+          <div class="recorded-box">
+            <div class="recorded-label">Score Recorded</div>
+            <div class="recorded-score">${match.score1} – ${match.score2}</div>
+            <div class="recorded-winner">${esc(winnerName)} wins</div>
+            <div class="recorded-note">Need to correct this? Contact your tournament admin.</div>
+          </div>`
+        return
+      }
+
+      // Score entry form
+      document.getElementById('content').innerHTML = `
+        <div class="match-label">${esc(matchLabel(match, format))}</div>
+        <div class="score-grid">
+          <div class="team-col">
+            <div class="team-name">${esc(match.team1?.name)}</div>
+            <input class="score-input" type="number" id="score1" min="0" max="30" inputmode="numeric" placeholder="0" />
+          </div>
+          <div class="vs">vs</div>
+          <div class="team-col">
+            <div class="team-name">${esc(match.team2?.name)}</div>
+            <input class="score-input" type="number" id="score2" min="0" max="30" inputmode="numeric" placeholder="0" />
+          </div>
+        </div>
+        <button class="btn-submit" id="submitBtn" onclick="submitScore()">Submit Score</button>
+        <div class="error-msg" id="errMsg"></div>`
+
+      setTimeout(() => document.getElementById('score1')?.focus(), 100)
+    }
+
+    async function submitScore() {
+      const s1 = parseInt(document.getElementById('score1')?.value)
+      const s2 = parseInt(document.getElementById('score2')?.value)
+      const errMsg = document.getElementById('errMsg')
+      const btn = document.getElementById('submitBtn')
+
+      if (isNaN(s1) || isNaN(s2)) { errMsg.textContent = 'Please enter both scores.'; return }
+      if (s1 === s2) { errMsg.textContent = 'Scores cannot be tied.'; return }
+      if (s1 < 0 || s2 < 0) { errMsg.textContent = 'Scores must be 0 or higher.'; return }
+
+      btn.disabled = true
+      errMsg.textContent = ''
+
+      try {
+        const res = await fetch('/api/score', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, score1: s1, score2: s2 })
+        })
+        const data = await res.json()
+        if (!res.ok) { errMsg.textContent = data.error || 'Error submitting score.'; btn.disabled = false; return }
+        load() // reload to show recorded state
+      } catch (e) {
+        errMsg.textContent = 'Network error — check your connection and try again.'
+        btn.disabled = false
+      }
+    }
+
+    applyConfig()
+    load()
+  </script>
+</body>
+</html>
