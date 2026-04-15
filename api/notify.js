@@ -116,10 +116,19 @@ module.exports = async function handler(req, res) {
   const eventName   = process.env.EVENT_NAME   || 'Tournament'
   const venmoHandle = process.env.VENMO_HANDLE || ''
   const entryFee    = parseInt(process.env.ENTRY_FEE || '0')
-  const venmoLink   = venmoHandle
-    ? `https://venmo.com/${venmoHandle}?txn=pay&amount=${entryFee}&note=${encodeURIComponent(eventName)}`
-    : '(Venmo not configured)'
-  const message = `Hi! You're registered for the ${eventName}. Entry fee is $${entryFee}/team ($${Math.round(entryFee / 2)}/person). Please pay via Venmo: ${venmoLink}`
+  const baseUrl     = `https://${req.headers.host}`
+  const tournamentFormat = process.env.TOURNAMENT_FORMAT || 'bracket'
+  const standingsUrl = tournamentFormat === 'pool_play' ? `${baseUrl}/roundrobin.html` : `${baseUrl}/bracket.html`
+
+  let message
+  if (entryFee > 0) {
+    const venmoLink = venmoHandle
+      ? `https://venmo.com/${venmoHandle}?txn=pay&amount=${entryFee}&note=${encodeURIComponent(eventName)}`
+      : '(Venmo not configured)'
+    message = `Hi! You're registered for the ${eventName}. Entry fee is $${entryFee}/team ($${Math.round(entryFee / 2)}/person). Please pay via Venmo: ${venmoLink}`
+  } else {
+    message = `Hi! You're registered for the ${eventName}. Entry is free — follow the standings here: ${standingsUrl}`
+  }
 
   const { data: teams, error } = await supabase
     .from(`${T}_teams`).select('id, name, phone, partner_status')

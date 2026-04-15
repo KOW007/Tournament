@@ -247,9 +247,11 @@
         document.getElementById('tab-bracket').style.display = isPoolPlay ? 'none' : ''
         document.getElementById('tab-pool-play').style.display = isPoolPlay ? '' : 'none'
         const fee = cfg.entryFee || 0
-        const venmo = cfg.venmoHandle ? `venmo.com/${cfg.venmoHandle}` : '(Venmo not configured)'
-        document.getElementById('notifyPreview').textContent =
-          `Hi! You're registered for the ${cfg.eventName}. Entry fee is $${fee}/team ($${Math.round(fee/2)}/person). Please pay via Venmo: ${venmo}`
+        const standingsUrl = cfg.tournamentFormat === 'pool_play' ? '/roundrobin.html' : '/bracket.html'
+        const preview = fee > 0
+          ? `Hi! You're registered for the ${cfg.eventName}. Entry fee is $${fee}/team ($${Math.round(fee/2)}/person). Please pay via Venmo: ${cfg.venmoHandle ? `venmo.com/${cfg.venmoHandle}` : '(Venmo not configured)'}`
+          : `Hi! You're registered for the ${cfg.eventName}. Entry is free — follow the standings here: [standings link]`
+        document.getElementById('notifyPreview').textContent = preview
       } catch (e) {}
     }
 
