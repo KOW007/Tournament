@@ -42,6 +42,7 @@ function computeStandings(matches, teams) {
   }
   for (const m of matches) {
     if (m.is_bye || m.status !== 'complete' || !m.team1_id || !m.team2_id || m.score1 == null) continue
+    if (m.bracket !== 'A' && m.bracket !== 'B') continue  // exclude championship from pool standings
     const t1 = stats[m.team1_id], t2 = stats[m.team2_id]
     if (!t1 || !t2) continue
     t1.PF += m.score1; t1.PA += m.score2; t1.GP++
@@ -79,6 +80,41 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'POST') {
+    const { action } = req.body || {}
+
+    // ── Create championship match ────────────────────────────────────────────
+    if (action === 'championship') {
+      const [matchRes, teamRes] = await Promise.all([
+        supabase.from(`${T}_matches`).select('*'),
+        supabase.from(`${T}_teams`).select('*')
+      ])
+      const matches = matchRes.data || []
+      const teams = teamRes.data || []
+
+      if (matches.find(m => m.bracket === 'F'))
+        return res.status(400).json({ error: 'Championship match already exists. Reset pool play to start over.' })
+
+      const standings = computeStandings(matches, teams)
+      const leaderA = standings.A?.[0]
+      const leaderB = standings.B?.[0]
+
+      if (!leaderA || !leaderB)
+        return res.status(400).json({ error: 'Both pools need at least one completed game before creating the championship.' })
+
+      const { error: ie } = await supabase.from(`${T}_matches`).insert({
+        bracket: 'F', round: 1, position: 9999,
+        team1_id: leaderA.id, team2_id: leaderB.id,
+        score1: null, score2: null, winner_id: null,
+        next_match_id: null, next_slot: null,
+        loser_next_match_id: null, loser_next_slot: null,
+        status: 'pending', is_bye: false, token: generateToken()
+      })
+      if (ie) return res.status(500).json({ error: ie.message })
+
+      return res.json({ success: true, poolALeader: leaderA.name, poolBLeader: leaderB.name })
+    }
+
+    // ── Create pool play schedule ────────────────────────────────────────────
     const numRounds = parseInt(req.body?.rounds ?? 6)
     if (isNaN(numRounds) || numRounds < 1 || numRounds > 13)
       return res.status(400).json({ error: 'rounds must be between 1 and 13.' })

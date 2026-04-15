@@ -101,6 +101,16 @@
   <div class="page">
     <div class="refresh-note" id="refreshNote">Loading...</div>
 
+    <!-- Championship -->
+    <div id="champSection" style="display:none;margin-bottom:1.25rem">
+      <div class="card" style="border:2px solid gold;background:linear-gradient(135deg,#fffbea,#fff)">
+        <div style="text-align:center">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#b8860b;margin-bottom:.75rem">Championship</div>
+          <div id="champContent"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Standings -->
     <div class="pools-grid">
       <div class="card">
@@ -246,11 +256,60 @@
       renderRound(r)
     }
 
+    function renderChampionship(match) {
+      const section = document.getElementById('champSection')
+      const content = document.getElementById('champContent')
+      if (!match) { section.style.display = 'none'; return }
+      section.style.display = 'block'
+
+      const t1 = match.team1?.name || '?'
+      const t2 = match.team2?.name || '?'
+      const scored = match.status === 'complete' && match.score1 != null
+      const t1wins = match.winner_id === match.team1_id
+      const t2wins = match.winner_id === match.team2_id
+
+      if (scored) {
+        const winner = t1wins ? t1 : t2
+        content.innerHTML = `
+          <div style="font-size:26px;margin-bottom:.25rem">🏆</div>
+          <div style="font-size:20px;font-weight:800;color:#b8860b;margin-bottom:.25rem">${esc(winner)}</div>
+          <div style="font-size:13px;color:#888;margin-bottom:1rem">Champion</div>
+          <div style="display:flex;justify-content:center;align-items:center;gap:16px;font-size:15px">
+            <div style="text-align:right">
+              <div style="font-weight:${t1wins?'800':'400'};color:${t1wins?'#0f0f0f':'#888'}">${esc(t1)}</div>
+              <div style="font-size:12px;color:#aaa">Pool A</div>
+            </div>
+            <div style="font-size:28px;font-weight:800;letter-spacing:2px;color:#333">${match.score1} – ${match.score2}</div>
+            <div style="text-align:left">
+              <div style="font-weight:${t2wins?'800':'400'};color:${t2wins?'#0f0f0f':'#888'}">${esc(t2)}</div>
+              <div style="font-size:12px;color:#aaa">Pool B</div>
+            </div>
+          </div>`
+      } else {
+        content.innerHTML = `
+          <div style="display:flex;justify-content:center;align-items:center;gap:20px;flex-wrap:wrap">
+            <div style="text-align:center">
+              <div style="font-size:16px;font-weight:800">${esc(t1)}</div>
+              <div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px">Pool A #1</div>
+            </div>
+            <div style="font-size:22px;font-weight:800;color:#ccc">vs</div>
+            <div style="text-align:center">
+              <div style="font-size:16px;font-weight:800">${esc(t2)}</div>
+              <div style="font-size:11px;color:var(--pool-b);font-weight:700;margin-top:2px">Pool B #1</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#aaa;margin-top:.75rem">Score pending...</div>`
+      }
+    }
+
     async function load() {
       try {
         const data = await fetch('/api/schedule').then(r => r.json())
         allMatches = data.matches || []
         allStandings = data.standings || {}
+
+        const champMatch = allMatches.find(m => m.bracket === 'F')
+        renderChampionship(champMatch || null)
 
         document.getElementById('standingsA').innerHTML = renderStandingsTable(allStandings.A || [])
         document.getElementById('standingsB').innerHTML = renderStandingsTable(allStandings.B || [])

@@ -83,6 +83,33 @@ module.exports = async function handler(req, res) {
     return res.json({ success: true, ...results })
   }
 
+  // ── Championship score link ─────────────────────────────────────────────────
+  if (action === 'championship') {
+    const baseUrl = `https://${req.headers.host}`
+    const eventName = process.env.EVENT_NAME || 'Tournament'
+
+    const { data: champMatch, error } = await supabase
+      .from(`${T}_matches`)
+      .select('*, team1:team1_id(id,name,phone), team2:team2_id(id,name,phone)')
+      .eq('bracket', 'F')
+      .single()
+
+    if (error || !champMatch) return res.status(400).json({ error: 'No championship match found. Create it first.' })
+
+    const link = `${baseUrl}/score?t=${champMatch.token}`
+    const results = { sent: 0, failed: 0, skipped: 0, sentList: [], failedList: [] }
+
+    for (const team of [champMatch.team1, champMatch.team2]) {
+      if (!team?.phone) { results.skipped++; continue }
+      const opponent = team.id === champMatch.team1_id ? champMatch.team2?.name : champMatch.team1?.name
+      const msg = `${eventName} – CHAMPIONSHIP\nvs ${opponent}\nSubmit your score: ${link}`
+      const ok = await sendText(team.phone, msg)
+      if (ok) { results.sent++; results.sentList.push({ name: team.name, phone: team.phone }) }
+      else { results.failed++; results.failedList.push({ name: team.name, phone: team.phone }) }
+    }
+    return res.json({ success: true, ...results })
+  }
+
   // ── Payment notification ────────────────────────────────────────────────────
   const eventName   = process.env.EVENT_NAME   || 'Tournament'
   const venmoHandle = process.env.VENMO_HANDLE || ''

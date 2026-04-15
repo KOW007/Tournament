@@ -183,6 +183,20 @@
         </div>
       </div>
 
+      <!-- Championship -->
+      <div class="card" style="border:1px solid gold">
+        <h2 style="font-size:16px;margin-bottom:.5rem">Championship Match</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:1rem">
+          Creates a final match between the current Pool A #1 and Pool B #1. Do this after all pool rounds are complete.
+        </p>
+        <div id="champStatus" style="font-size:13px;color:#555;margin-bottom:1rem"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="createChampBtn" onclick="createChampionship()">Create Championship Match</button>
+          <button class="btn" style="background:#f0f0f0;color:#555;font-size:13px" onclick="textChampionship()">Text Score Link to Both Teams</button>
+        </div>
+        <div class="msg" id="champMsg"></div>
+      </div>
+
       <!-- Text round links -->
       <div class="card">
         <h2 style="font-size:16px;margin-bottom:.5rem">Text Score Links to Teams</h2>
@@ -435,6 +449,25 @@
           document.getElementById('roundScoreTable').textContent = 'Generate a schedule first.'
         }
 
+        // Championship match status
+        const champMatch = matches.find(m => m.bracket === 'F')
+        const champStatus = document.getElementById('champStatus')
+        const createChampBtn = document.getElementById('createChampBtn')
+        if (champMatch && champStatus) {
+          const t1 = champMatch.team1?.name || '?'
+          const t2 = champMatch.team2?.name || '?'
+          if (champMatch.status === 'complete' && champMatch.score1 != null) {
+            const winner = champMatch.winner_id === champMatch.team1_id ? t1 : t2
+            champStatus.innerHTML = `<strong style="color:#b8860b">🏆 ${esc(winner)}</strong> won the championship (${champMatch.score1}–${champMatch.score2})`
+          } else {
+            champStatus.innerHTML = `Match set: <strong>${esc(t1)}</strong> (Pool A) vs <strong>${esc(t2)}</strong> (Pool B) — awaiting score`
+          }
+          if (createChampBtn) createChampBtn.disabled = true
+        } else if (champStatus) {
+          champStatus.textContent = 'Not created yet.'
+          if (createChampBtn) createChampBtn.disabled = false
+        }
+
         // Render mini standings
         renderAdminStandings(standings)
       } catch (e) {}
@@ -578,6 +611,40 @@
       const data = await res.json()
       if (!res.ok) { alert(data.error || 'Error saving score.'); return }
       loadRoundScores()
+    }
+
+    async function createChampionship() {
+      if (!confirm('Create the championship match between current Pool A #1 and Pool B #1?')) return
+      const btn = document.getElementById('createChampBtn')
+      const msg = document.getElementById('champMsg')
+      btn.disabled = true
+      const res = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ action: 'championship' })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        msg.className = 'msg error'; msg.textContent = data.error; btn.disabled = false
+      } else {
+        msg.className = 'msg success'
+        msg.textContent = `✓ Championship: ${data.poolALeader} vs ${data.poolBLeader}`
+        loadPoolPlayPanel()
+      }
+    }
+
+    async function textChampionship() {
+      if (!confirm('Text the championship score link to both teams?')) return
+      const msg = document.getElementById('champMsg')
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ action: 'championship' })
+      })
+      const data = await res.json()
+      if (!res.ok) { msg.className = 'msg error'; msg.textContent = data.error; return }
+      msg.className = 'msg success'
+      msg.textContent = `✓ Sent: ${data.sent} | Failed: ${data.failed} | Skipped: ${data.skipped}`
     }
 
     async function textRoundLinks() {
