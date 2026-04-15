@@ -189,30 +189,35 @@
 
       btn.disabled = true; msg.textContent = ''
 
-      const res = await fetch('/api/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, player1: p1, player2: p2, phone, partner_status: partnerStatus })
-      })
-      const data = await res.json()
+      try {
+        const res = await fetch('/api/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, player1: p1, player2: p2, phone, partner_status: partnerStatus })
+        })
+        const data = await res.json()
 
-      if (!res.ok) {
-        msg.className = 'msg error'
-        msg.textContent = data.error
-        if (data.error.includes('closed')) {
-          document.getElementById('closedBanner').style.display = 'block'
-          document.getElementById('regForm').style.display = 'none'
+        if (!res.ok) {
+          msg.className = 'msg error'
+          msg.textContent = data.error
+          if (data.error.includes('closed')) {
+            document.getElementById('closedBanner').style.display = 'block'
+            document.getElementById('regForm').style.display = 'none'
+          }
+        } else {
+          msg.className = 'msg success'
+          msg.textContent = `✓ "${data.name}" registered!`
+          document.getElementById('teamName').value = ''
+          document.getElementById('player1').value = ''
+          document.getElementById('player2').value = ''
+          document.getElementById('phone').value = ''
+          document.getElementById('partnerStatus').value = 'has_partner'
+          togglePlayer2()
+          loadTeams()
         }
-      } else {
-        msg.className = 'msg success'
-        msg.textContent = `✓ "${data.name}" registered!`
-        document.getElementById('teamName').value = ''
-        document.getElementById('player1').value = ''
-        document.getElementById('player2').value = ''
-        document.getElementById('phone').value = ''
-        document.getElementById('partnerStatus').value = 'has_partner'
-        togglePlayer2()
-        loadTeams()
+      } catch (e) {
+        msg.className = 'msg error'
+        msg.textContent = 'Network error — please try again.'
       }
       btn.disabled = false
     }

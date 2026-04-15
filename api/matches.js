@@ -19,64 +19,43 @@ function getBracketSize(teamCount) {
 
 function buildMatchStructure(bracketSize) {
   const matches = []
-  let id = 1
 
   const WB_ROUNDS = Math.log2(bracketSize)
-  // Consolation is single elimination — narrows every round.
-  // WB R1 losers seed consolation R1. Consolation slots freed by R1 byes are
-  // claimed by WB R2 bye-recipients who lose (their first real loss). See assignTeams.
   const LB_ROUNDS = WB_ROUNDS - 1
 
-  // Pre-assign IDs for WB
-  const wb = {}
-  for (let r = 1; r <= WB_ROUNDS; r++) {
-    wb[r] = {}
-    const count = bracketSize / Math.pow(2, r)
-    for (let p = 0; p < count; p++) wb[r][p] = id++
-  }
-
-  // Pre-assign IDs for LB (single elimination, halves each round)
-  // LB Rr has bracketSize / 2^(r+1) matches
-  const lb = {}
-  for (let r = 1; r <= LB_ROUNDS; r++) {
-    lb[r] = {}
-    const count = bracketSize / Math.pow(2, r + 1)
-    for (let p = 0; p < count; p++) lb[r][p] = id++
-  }
-
-  // Generate WB matches
+  // Generate WB matches with string keys for linking (_next_key, _loser_next_key)
   for (let r = 1; r <= WB_ROUNDS; r++) {
     const count = bracketSize / Math.pow(2, r)
     for (let p = 0; p < count; p++) {
-      const next_match_id = r < WB_ROUNDS ? wb[r + 1][Math.floor(p / 2)] : null
-      const next_slot = r < WB_ROUNDS ? (p % 2) + 1 : null
-
-      // WB R1 losers → consolation R1. WB R2 loser routing set in assignTeams.
-      let loser_next_match_id = null, loser_next_slot = null
-      if (r === 1 && LB_ROUNDS > 0) {
-        loser_next_match_id = lb[1][Math.floor(p / 2)]
-        loser_next_slot = (p % 2) + 1
-      }
-
       matches.push({
-        id: wb[r][p], bracket: 'W', round: r, position: p,
+        _key: `W-${r}-${p}`,
+        _next_key: r < WB_ROUNDS ? `W-${r + 1}-${Math.floor(p / 2)}` : null,
+        _loser_next_key: r === 1 && LB_ROUNDS > 0 ? `L-1-${Math.floor(p / 2)}` : null,
+        bracket: 'W', round: r, position: p,
         team1_id: null, team2_id: null, score1: null, score2: null, winner_id: null,
-        next_match_id, next_slot, loser_next_match_id, loser_next_slot,
+        next_match_id: null,
+        next_slot: r < WB_ROUNDS ? (p % 2) + 1 : null,
+        loser_next_match_id: null,
+        loser_next_slot: r === 1 && LB_ROUNDS > 0 ? (p % 2) + 1 : null,
         status: 'pending', is_bye: false, token: generateToken()
       })
     }
   }
 
-  // Generate LB matches (single elimination, halves each round)
+  // Generate LB matches
   for (let r = 1; r <= LB_ROUNDS; r++) {
     const count = bracketSize / Math.pow(2, r + 1)
     for (let p = 0; p < count; p++) {
-      const next_match_id = r < LB_ROUNDS ? lb[r + 1][Math.floor(p / 2)] : null
-      const next_slot = r < LB_ROUNDS ? (p % 2) + 1 : null
       matches.push({
-        id: lb[r][p], bracket: 'L', round: r, position: p,
+        _key: `L-${r}-${p}`,
+        _next_key: r < LB_ROUNDS ? `L-${r + 1}-${Math.floor(p / 2)}` : null,
+        _loser_next_key: null,
+        bracket: 'L', round: r, position: p,
         team1_id: null, team2_id: null, score1: null, score2: null, winner_id: null,
-        next_match_id, next_slot, loser_next_match_id: null, loser_next_slot: null,
+        next_match_id: null,
+        next_slot: r < LB_ROUNDS ? (p % 2) + 1 : null,
+        loser_next_match_id: null,
+        loser_next_slot: null,
         status: 'pending', is_bye: false, token: generateToken()
       })
     }
@@ -123,10 +102,10 @@ function assignTeams(matches, teams, bracketSize) {
     const r1b = r1[2 * q + 1]  // feeds slot 2 of this R2 match
     if (r1a && r1a.is_bye) {
       // r1a's consolation slot is empty — give it to the R2 loser
-      r2m.loser_next_match_id = r1a.loser_next_match_id
+      r2m._loser_next_key = r1a._loser_next_key
       r2m.loser_next_slot = r1a.loser_next_slot
     } else if (r1b && r1b.is_bye) {
-      r2m.loser_next_match_id = r1b.loser_next_match_id
+      r2m._loser_next_key = r1b._loser_next_key
       r2m.loser_next_slot = r1b.loser_next_slot
     }
     // If neither R1 feeder was a bye, both teams already had a real loss — R2 loser is eliminated
@@ -219,11 +198,32 @@ module.exports = async function handler(req, res) {
     let matches = buildMatchStructure(bracketSize)
     matches = assignTeams(matches, teams, bracketSize)
 
-    const { error: ie } = await supabase.from(`${T}_matches`).insert(matches)
+    // Strip temporary key fields before inserting — DB assigns its own IDs
+    const toInsert = matches.map(({ _key, _next_key, _loser_next_key, ...m }) => m)
+    const { data: inserted, error: ie } = await supabase
+      .from(`${T}_matches`).insert(toInsert).select()
     if (ie) return res.status(500).json({ error: ie.message })
 
+    // Build a map from (bracket-round-position) string to DB-assigned id
+    const keyToId = {}
+    for (const m of inserted) keyToId[`${m.bracket}-${m.round}-${m.position}`] = m.id
+
+    // Second pass: update next_match_id and loser_next_match_id using the resolved IDs
+    const updates = []
+    for (const m of matches) {
+      const dbId = keyToId[`${m.bracket}-${m.round}-${m.position}`]
+      const next_match_id = m._next_key ? keyToId[m._next_key] ?? null : null
+      const loser_next_match_id = m._loser_next_key ? keyToId[m._loser_next_key] ?? null : null
+      if (next_match_id !== null || loser_next_match_id !== null) {
+        updates.push(supabase.from(`${T}_matches`)
+          .update({ next_match_id, loser_next_match_id })
+          .eq('id', dbId))
+      }
+    }
+    if (updates.length) await Promise.all(updates)
+
     await supabase.from(`${T}_settings`).upsert({ key: 'bracket_created', value: 'true' })
-    return res.json({ success: true, matchCount: matches.length })
+    return res.json({ success: true, matchCount: inserted.length })
   }
 
   if (req.method === 'PUT') {

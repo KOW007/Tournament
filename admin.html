@@ -81,10 +81,10 @@
     <div class="tabs">
       <div class="tab active" onclick="showTab('teams')">Teams</div>
       <div class="tab" onclick="showTab('notify')">Send Texts</div>
-      <div class="tab" onclick="showTab('bracket')">Create Bracket</div>
+      <div class="tab" id="tab-bracket" onclick="showTab('bracket')">Create Bracket</div>
       <div class="tab" onclick="showTab('scores')">View Scores</div>
       <div class="tab" onclick="showTab('view-bracket')">View Standings</div>
-      <div class="tab" onclick="showTab('pool-play')">Pool Play</div>
+      <div class="tab" id="tab-pool-play" onclick="showTab('pool-play')">Pool Play</div>
     </div>
 
     <!-- Teams panel -->
@@ -243,6 +243,9 @@
         document.getElementById('eventName').textContent = cfg.eventName + ' Admin'
         if (cfg.logo) { const img = document.getElementById('eventLogo'); img.src = cfg.logo; img.style.display = '' }
         if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+        const isPoolPlay = cfg.tournamentFormat === 'pool_play'
+        document.getElementById('tab-bracket').style.display = isPoolPlay ? 'none' : ''
+        document.getElementById('tab-pool-play').style.display = isPoolPlay ? '' : 'none'
         const fee = cfg.entryFee || 0
         const venmo = cfg.venmoHandle ? `venmo.com/${cfg.venmoHandle}` : '(Venmo not configured)'
         document.getElementById('notifyPreview').textContent =
