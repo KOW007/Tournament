@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bracket — 2026 Pickleball Tournament</title>
+  <style>
+    :root { --accent: #3a8fc1; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; color: #0f0f0f; }
+    header { background: #0f0f0f; color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    header h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    header h1 img { height: 44px; width: auto; }
+    nav a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 500; margin-left: 1.5rem; }
+    nav a:hover { color: white; }
+
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid #ddd; background: white; padding: 0 2rem; }
+    .tab { padding: 14px 24px; font-size: 14px; font-weight: 600; cursor: pointer; color: #888; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #0f0f0f; border-bottom-color: var(--accent); }
+
+    .bracket-panel { display: none; overflow-x: auto; padding: 1.5rem; }
+    .bracket-panel.active { display: block; }
+
+    /* Bracket layout */
+    .bracket-rounds { display: flex; gap: 0; align-items: flex-start; }
+    .round-col { display: flex; flex-direction: column; min-width: 180px; }
+    .round-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #888; text-align: center; padding: 8px 4px; background: white; border-bottom: 1px solid #eee; position: sticky; top: 0; }
+
+    .match-wrapper { display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+    .match-card {
+      background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+      margin: 0 4px; flex: 1; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .match-card.clickable { cursor: pointer; }
+    .match-card.clickable:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(58,143,193,0.25); }
+    .match-team {
+      padding: 6px 10px; font-size: 12px; display: flex;
+      justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #f0f0f0; min-height: 34px;
+    }
+    .match-team:last-child { border-bottom: none; }
+    .match-team.winner { background: #deeef8; font-weight: 700; color: #0f0f0f; }
+    .match-team.bye { color: #bbb; font-style: italic; }
+    .team-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-score { font-weight: 700; margin-left: 8px; min-width: 20px; text-align: right; }
+
+    /* Connector lines */
+    .connector { width: 20px; display: flex; flex-direction: column; align-items: flex-start; }
+    .connector-line { width: 20px; height: 1px; background: #ccc; }
+
+    .gf-wrapper { padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+    .gf-card { background: white; border: 2px solid var(--accent); border-radius: 12px; padding: 1.5rem; min-width: 250px; text-align: center; box-shadow: 0 2px 8px rgba(58,143,193,0.2); }
+    .gf-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 1rem; }
+    .champion-name { font-size: 22px; font-weight: 800; color: #1a1a18; margin-top: 8px; }
+
+    .empty-bracket { text-align: center; padding: 4rem; color: #aaa; font-size: 15px; }
+    .refresh-note { font-size: 12px; color: #aaa; text-align: right; padding: 0.5rem 1.5rem; }
+
+    /* Score modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 12px; padding: 2rem; min-width: 320px; max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 1.25rem; }
+    .modal-teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-bottom: 1.25rem; }
+    .modal-team { text-align: center; }
+    .modal-team-name { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .modal-score-input { width: 100%; text-align: center; font-size: 28px; font-weight: 700; padding: 10px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+    .modal-score-input:focus { border-color: var(--accent); }
+    .modal-vs { font-size: 18px; font-weight: 700; color: #aaa; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1rem; }
+    .modal-msg { font-size: 13px; color: #c0392b; min-height: 18px; margin-top: 8px; }
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #2a7aaa; }
+    .btn-secondary { background: #f0f0f0; color: #555; }
+    .btn-secondary:hover { background: #e0e0e0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><img id="eventLogo" src="/pickleball_logo.jpg" alt="" /><span id="eventName">2026 Pickleball Tournament</span></h1>
+    <nav>
+      <a href="/">Register</a>
+      <a href="/bracket.html">Bracket</a>
+    </nav>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('winners')">Main Bracket</div>
+    <div class="tab" onclick="showTab('losers')">Consolation Bracket</div>
+    <div class="tab" onclick="showTab('champions')">Champions</div>
+  </div>
+  <div class="refresh-note" id="refreshNote">Auto-refreshes every 30s</div>
+
+  <div id="tab-winners" class="bracket-panel active">
+    <div id="winnersBracket"></div>
+  </div>
+  <div id="tab-losers" class="bracket-panel">
+    <div id="losersBracket"></div>
+  </div>
+  <div id="tab-champions" class="bracket-panel">
+    <div id="championsSection"></div>
+  </div>
+
+  <!-- Score entry modal (admin mode only) -->
+  <div class="modal-overlay" id="scoreModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <div class="modal-title">Enter Score</div>
+      <div class="modal-teams">
+        <div class="modal-team">
+          <div class="modal-team-name" id="modalTeam1Name"></div>
+          <input class="modal-score-input" type="number" id="modalScore1" min="0" placeholder="0" />
+        </div>
+        <div class="modal-vs">vs</div>
+        <div class="modal-team">
+          <div class="modal-team-name" id="modalTeam2Name"></div>
+          <input class="modal-score-input" type="number" id="modalScore2" min="0" placeholder="0" />
+        </div>
+      </div>
+      <div class="modal-msg" id="modalMsg"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitModalScore()">Save Score</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const adminMode = new URLSearchParams(location.search).get('mode') === 'admin'
+      || !!sessionStorage.getItem('adminPw')
+
+    async function applyConfig() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json())
+        document.title = cfg.eventName
+        document.getElementById('eventName').textContent = cfg.eventName
+        if (cfg.logo) {
+          const img = document.getElementById('eventLogo')
+          img.src = cfg.logo
+          img.style.display = ''
+        }
+        if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+      } catch (e) {}
+    }
+
+    let currentMatches = []
+    let currentMatchId = null
+
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['winners','losers','champions'][i] === name)
+      })
+      document.querySelectorAll('.bracket-panel').forEach(p => p.classList.remove('active'))
+      document.getElementById('tab-' + name).classList.add('active')
+    }
+
+    function esc(s) {
+      if (!s) return '—'
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+
+    function renderMatch(m) {
+      const t1win = m.winner_id && m.team1 && m.winner_id === m.team1.id
+      const t2win = m.winner_id && m.team2 && m.winner_id === m.team2.id
+      const t1bye = !m.team1 && m.is_bye
+      const t2bye = !m.team2 && m.is_bye
+      const clickable = adminMode && m.team1_id && m.team2_id && m.status !== 'complete' && !m.is_bye
+      return `
+        <div class="match-card${clickable ? ' clickable' : ''}"${clickable ? ` onclick="openScoreModal(${m.id})"` : ''}>
+          <div class="match-team ${t1win ? 'winner' : ''} ${t1bye ? 'bye' : ''}">
+            <span class="team-label">${m.team1 ? esc(m.team1.name) : (m.is_bye ? 'BYE' : '<span style=color:#ccc>TBD</span>')}</span>
+            <span class="team-score">${m.score1 != null ? m.score1 : ''}</span>
+          </div>
+          <div class="match-team ${t2win ? 'winner' : ''} ${t2bye ? 'bye' : ''}">
+            <span class="team-label">${m.team2 ? esc(m.team2.name) : (m.is_bye ? 'BYE' : '<span style=color:#ccc>TBD</span>')}</span>
+            <span class="team-score">${m.score2 != null ? m.score2 : ''}</span>
+          </div>
+        </div>`
+    }
+
+    function getLBLabel(r, lbRounds) {
+      if (r === lbRounds) return 'Consolation Final'
+      if (r === lbRounds - 1) return 'Consolation Semis'
+      return `Consolation Round ${r}`
+    }
+
+    function renderBracket(matches, bracket) {
+      const rounds = {}
+      matches.filter(m => m.bracket === bracket).forEach(m => {
+        if (!rounds[m.round]) rounds[m.round] = []
+        rounds[m.round].push(m)
+      })
+      const roundNums = Object.keys(rounds).map(Number).sort((a,b) => a-b)
+      if (!roundNums.length) return '<div class="empty-bracket">Bracket not created yet.</div>'
+
+      const wbMatches = matches.filter(m => m.bracket === 'W')
+      const r1Count = wbMatches.filter(m => m.round === 1).length
+      const bracketSize = r1Count * 2
+      const lbRounds = matches.filter(m => m.bracket === 'L').length > 0
+        ? Math.max(...matches.filter(m => m.bracket === 'L').map(m => m.round))
+        : 0
+
+      const BASE_HEIGHT = 80
+
+      return `<div class="bracket-rounds">` + roundNums.map(r => {
+        const ms = rounds[r].sort((a,b) => a.position - b.position)
+        const totalTeams = bracketSize / Math.pow(2, r - 1)
+        const label = bracket === 'W'
+          ? (totalTeams === 2 ? 'Main Bracket Final' : totalTeams === 4 ? 'Semifinals' : totalTeams === 8 ? 'Quarterfinals' : `Round of ${totalTeams}`)
+          : getLBLabel(r, lbRounds)
+
+        const wrapperHeight = bracket === 'W'
+          ? Math.pow(2, r - 1) * BASE_HEIGHT
+          : Math.pow(2, r - 1) * BASE_HEIGHT
+
+        return `
+          <div class="round-col">
+            <div class="round-label">${label}</div>
+            ${ms.map(m => `<div class="match-wrapper" style="height:${wrapperHeight}px">${renderMatch(m)}</div>`).join('')}
+          </div>`
+      }).join('') + '</div>'
+    }
+
+    function renderChampions(matches) {
+      const wbFinal = matches.filter(m => m.bracket === 'W').sort((a,b) => b.round - a.round)[0]
+      const lbFinal = matches.filter(m => m.bracket === 'L').sort((a,b) => b.round - a.round)[0]
+      const wbChamp = wbFinal?.winner
+      const lbChamp = lbFinal?.winner
+
+      return `<div class="gf-wrapper">
+        <div class="gf-card">
+          <div class="gf-title">🏆 Main Bracket Champion</div>
+          ${wbChamp
+            ? `<div class="champion-name" style="font-size:20px;margin-top:4px">${esc(wbChamp.name)}</div>`
+            : `<div style="color:#aaa;font-size:14px;margin-top:4px">TBD — bracket in progress</div>`}
+        </div>
+        <div class="gf-card" style="margin-top:1rem">
+          <div class="gf-title" style="color:var(--accent)">🥈 Consolation Champion</div>
+          ${lbChamp
+            ? `<div class="champion-name" style="font-size:20px;margin-top:4px">${esc(lbChamp.name)}</div>`
+            : `<div style="color:#aaa;font-size:14px;margin-top:4px">TBD — bracket in progress</div>`}
+        </div>
+      </div>`
+    }
+
+    function openScoreModal(matchId) {
+      const m = currentMatches.find(x => x.id === matchId)
+      if (!m) return
+      currentMatchId = matchId
+      document.getElementById('modalTeam1Name').textContent = m.team1?.name || 'Team 1'
+      document.getElementById('modalTeam2Name').textContent = m.team2?.name || 'Team 2'
+      document.getElementById('modalScore1').value = ''
+      document.getElementById('modalScore2').value = ''
+      document.getElementById('modalMsg').textContent = ''
+      document.getElementById('scoreModal').classList.add('open')
+      document.getElementById('modalScore1').focus()
+    }
+
+    function closeModal() {
+      document.getElementById('scoreModal').classList.remove('open')
+      currentMatchId = null
+    }
+
+    async function submitModalScore() {
+      const score1 = parseInt(document.getElementById('modalScore1').value)
+      const score2 = parseInt(document.getElementById('modalScore2').value)
+      const msg = document.getElementById('modalMsg')
+      if (isNaN(score1) || isNaN(score2)) { msg.textContent = 'Enter both scores.'; return }
+      if (score1 === score2) { msg.textContent = 'Scores cannot be tied.'; return }
+
+      const pw = sessionStorage.getItem('adminPw')
+      const res = await fetch('/api/matches', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pw },
+        body: JSON.stringify({ match_id: currentMatchId, score1, score2 })
+      })
+      const data = await res.json()
+      if (!res.ok) { msg.textContent = data.error || 'Error saving score.'; return }
+      closeModal()
+      load()
+    }
+
+    async function load() {
+      const res = await fetch('/api/matches')
+      if (!res.ok) return
+      currentMatches = await res.json()
+      document.getElementById('winnersBracket').innerHTML = renderBracket(currentMatches, 'W')
+      document.getElementById('losersBracket').innerHTML = renderBracket(currentMatches, 'L')
+      document.getElementById('championsSection').innerHTML = renderChampions(currentMatches)
+      document.getElementById('refreshNote').textContent = 'Last updated: ' + new Date().toLocaleTimeString()
+    }
+
+    applyConfig()
+    load()
+    setInterval(load, 30000)
+  </script>
+</body>
+</html>

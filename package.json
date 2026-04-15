@@ -1,0 +1,8 @@
+{
+  "name": "pickleball-tournament",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "twilio": "^4.0.0"
+  }
+}

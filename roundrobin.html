@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pool Play — 2026 Pickleball Tournament</title>
+  <style>
+    :root { --accent: #3a8fc1; --pool-b: #e67e22; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; color: #0f0f0f; }
+    header { background: #0f0f0f; color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    header h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    header h1 img { height: 44px; width: auto; }
+    nav a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 500; margin-left: 1.5rem; }
+    nav a:hover { color: white; }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .refresh-note { font-size: 12px; color: #aaa; text-align: right; margin-bottom: 1rem; }
+
+    .pools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+    @media (max-width: 680px) { .pools-grid { grid-template-columns: 1fr; } }
+
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1.25rem; }
+    .pool-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+    .pool-badge {
+      width: 34px; height: 34px; border-radius: 50%;
+      font-size: 15px; font-weight: 800; display: flex; align-items: center;
+      justify-content: center; color: white; flex-shrink: 0;
+    }
+    .pool-badge-a { background: var(--accent); }
+    .pool-badge-b { background: var(--pool-b); }
+    .pool-title { font-size: 16px; font-weight: 700; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 7px 8px; border-bottom: 2px solid #eee; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; white-space: nowrap; }
+    td { padding: 9px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .rank { color: #bbb; font-size: 11px; font-weight: 600; }
+    .team-name-cell { font-weight: 600; font-size: 13px; }
+    .team-players { font-size: 11px; color: #aaa; }
+    .num-win { color: #2d6a2d; font-weight: 700; }
+    .num-loss { color: #888; }
+    .leader-row td { background: #f5fbff; }
+    .diff-pos { color: #2d6a2d; font-weight: 600; }
+    .diff-neg { color: #c0392b; font-weight: 600; }
+
+    /* Round schedule */
+    .schedule-card { margin-bottom: 0; }
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 1rem; }
+    .round-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .round-tab {
+      padding: 7px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      cursor: pointer; background: white; border: 1px solid #ddd; color: #555;
+      transition: all 0.1s;
+    }
+    .round-tab.active { background: #0f0f0f; color: white; border-color: #0f0f0f; }
+    .round-tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+    .round-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 680px) { .round-grid { grid-template-columns: 1fr; } }
+
+    .pool-section-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 10px;
+    }
+    .match-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0; border-bottom: 1px solid #f4f4f4;
+    }
+    .match-row:last-child { border-bottom: none; }
+    .court-badge {
+      background: #f0f4f8; border-radius: 6px; padding: 3px 8px;
+      font-size: 11px; font-weight: 700; color: #666; white-space: nowrap;
+      min-width: 54px; text-align: center; flex-shrink: 0;
+    }
+    .match-teams { flex: 1; min-width: 0; }
+    .match-team-name {
+      font-size: 12px; padding: 1px 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .match-scores { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; }
+    .match-score { font-size: 14px; font-weight: 700; min-width: 22px; text-align: right; }
+    .score-winner { color: #2d6a2d; }
+    .score-loser { color: #aaa; }
+    .score-pending { color: #ddd; }
+    .bye-row { font-style: italic; color: #aaa; font-size: 12px; padding: 6px 0; }
+
+    .empty { text-align: center; padding: 3rem; color: #aaa; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><img id="eventLogo" src="/pickleball_logo.jpg" alt="" /><span id="eventName">Pool Play</span></h1>
+    <nav>
+      <a href="/">Register</a>
+      <a href="/roundrobin.html">Standings</a>
+      <a href="/admin.html" style="font-size:11px;opacity:0.5">Admin</a>
+    </nav>
+  </header>
+
+  <div class="page">
+    <div class="refresh-note" id="refreshNote">Loading...</div>
+
+    <!-- Standings -->
+    <div class="pools-grid">
+      <div class="card">
+        <div class="pool-header">
+          <div class="pool-badge pool-badge-a">A</div>
+          <div class="pool-title">Pool A Standings</div>
+        </div>
+        <div id="standingsA"><div class="empty">Loading...</div></div>
+      </div>
+      <div class="card">
+        <div class="pool-header">
+          <div class="pool-badge pool-badge-b">B</div>
+          <div class="pool-title">Pool B Standings</div>
+        </div>
+        <div id="standingsB"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- Schedule by Round -->
+    <div class="card schedule-card">
+      <div class="section-title">Round Schedule</div>
+      <div class="round-tabs" id="roundTabs"></div>
+      <div class="round-grid" id="roundContent">
+        <div class="empty" style="grid-column:1/-1">Schedule not generated yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allMatches = [], allStandings = {}, activeRound = 1
+
+    function esc(s) {
+      if (!s) return ''
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
+
+    async function applyConfig() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json())
+        document.getElementById('eventName').textContent = cfg.eventName
+        document.title = cfg.eventName + ' — Pool Play'
+        if (cfg.logo) document.getElementById('eventLogo').src = cfg.logo
+        if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+      } catch (e) {}
+    }
+
+    function renderStandingsTable(teams) {
+      if (!teams || !teams.length) return '<div class="empty" style="padding:1.5rem">No teams assigned yet.</div>'
+      return `<table>
+        <thead>
+          <tr>
+            <th>#</th><th>Team</th>
+            <th title="Wins">W</th><th title="Losses">L</th>
+            <th title="Games played">GP</th>
+            <th title="Points for">PF</th><th title="Points against">PA</th>
+            <th title="Point differential">+/-</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${teams.map((t, i) => {
+            const diff = t.PF - t.PA
+            return `<tr class="${i === 0 && t.GP > 0 ? 'leader-row' : ''}">
+              <td class="rank">${i + 1}</td>
+              <td>
+                <div class="team-name-cell">${esc(t.name)}</div>
+                <div class="team-players">${esc(t.player1)}${t.player2 ? ' &amp; ' + esc(t.player2) : ''}</div>
+              </td>
+              <td class="num-win">${t.W}</td>
+              <td class="num-loss">${t.L}</td>
+              <td>${t.GP}</td>
+              <td>${t.PF}</td>
+              <td>${t.PA}</td>
+              <td class="${diff >= 0 ? 'diff-pos' : 'diff-neg'}">${diff >= 0 ? '+' : ''}${diff}</td>
+            </tr>`
+          }).join('')}
+        </tbody>
+      </table>`
+    }
+
+    function renderPoolRound(pool, round) {
+      const poolMatches = allMatches.filter(m => m.bracket === pool && m.round === round)
+      if (!poolMatches.length) return ''
+
+      const color = pool === 'A' ? 'var(--accent)' : 'var(--pool-b)'
+      let courtNum = 0
+
+      const rows = poolMatches.map(m => {
+        if (m.is_bye) {
+          return `<div class="bye-row">${esc(m.team1?.name || '?')} — bye this round</div>`
+        }
+        courtNum++
+        const t1wins = m.winner_id === m.team1_id
+        const t2wins = m.winner_id === m.team2_id
+        const scored = m.status === 'complete' && m.score1 != null
+        return `<div class="match-row">
+          <div class="court-badge">Court ${courtNum}</div>
+          <div class="match-teams">
+            <div class="match-team-name" style="font-weight:${t1wins ? '700' : '400'}">${esc(m.team1?.name || '?')}</div>
+            <div class="match-team-name" style="font-weight:${t2wins ? '700' : '400'}">${esc(m.team2?.name || '?')}</div>
+          </div>
+          <div class="match-scores">
+            ${scored
+              ? `<div class="match-score ${t1wins ? 'score-winner' : 'score-loser'}">${m.score1}</div>
+                 <div class="match-score ${t2wins ? 'score-winner' : 'score-loser'}">${m.score2}</div>`
+              : `<div class="match-score score-pending">–</div>
+                 <div class="match-score score-pending">–</div>`}
+          </div>
+        </div>`
+      }).join('')
+
+      return `<div>
+        <div class="pool-section-label" style="color:${color}">Pool ${pool}</div>
+        ${rows}
+      </div>`
+    }
+
+    function renderRound(round) {
+      const poolA = renderPoolRound('A', round)
+      const poolB = renderPoolRound('B', round)
+      const content = document.getElementById('roundContent')
+      if (!poolA && !poolB) {
+        content.innerHTML = '<div class="empty" style="grid-column:1/-1">No matches for this round.</div>'
+      } else {
+        content.innerHTML = (poolA || '') + (poolB || '')
+      }
+    }
+
+    function buildRoundTabs() {
+      const rounds = [...new Set(allMatches.map(m => m.round))].sort((a, b) => a - b)
+      const tabsEl = document.getElementById('roundTabs')
+      if (!rounds.length) { tabsEl.innerHTML = ''; return }
+      if (!rounds.includes(activeRound)) activeRound = rounds[0]
+      tabsEl.innerHTML = rounds.map(r =>
+        `<div class="round-tab ${r === activeRound ? 'active' : ''}" onclick="selectRound(${r})">Round ${r}</div>`
+      ).join('')
+    }
+
+    function selectRound(r) {
+      activeRound = r
+      document.querySelectorAll('.round-tab').forEach(t => {
+        t.classList.toggle('active', parseInt(t.textContent.replace('Round ', '')) === r)
+      })
+      renderRound(r)
+    }
+
+    async function load() {
+      try {
+        const data = await fetch('/api/schedule').then(r => r.json())
+        allMatches = data.matches || []
+        allStandings = data.standings || {}
+
+        document.getElementById('standingsA').innerHTML = renderStandingsTable(allStandings.A || [])
+        document.getElementById('standingsB').innerHTML = renderStandingsTable(allStandings.B || [])
+        buildRoundTabs()
+        renderRound(activeRound)
+        document.getElementById('refreshNote').textContent = 'Last updated: ' + new Date().toLocaleTimeString()
+      } catch (e) {
+        document.getElementById('refreshNote').textContent = 'Error loading data — retrying...'
+      }
+    }
+
+    applyConfig()
+    load()
+    setInterval(load, 30000)
+  </script>
+</body>
+</html>

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — 2026 Pickleball Tournament</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; color: #0f0f0f; }
+    header { background: #0f0f0f; color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    header h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    header h1 img { height: 44px; width: auto; }
+    nav a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 500; margin-left: 1.5rem; }
+
+    /* Login */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 60px); }
+    .login-card { background: white; border-radius: 12px; padding: 2rem; width: 340px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    .login-card h2 { font-size: 18px; margin-bottom: 1.25rem; }
+
+    /* Layout */
+    .page { max-width: 1000px; margin: 0 auto; padding: 2rem 1rem; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; }
+    .tab { padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: white; border: 1px solid #ddd; color: #555; }
+    .tab.active { background: #0f0f0f; color: white; border-color: #0f0f0f; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Form elements */
+    .card { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    input, select { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; background: white; }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(58,143,193,0.15); }
+    .form-row { margin-bottom: 1rem; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .btn { display: inline-block; padding: 10px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #2a7aaa; }
+    .btn-danger { background: #c0392b; color: white; font-size: 12px; padding: 5px 12px; }
+    .btn-danger:hover { background: #a93226; }
+    .btn:disabled { background: #aaa; cursor: not-allowed; }
+    .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .msg.success { color: var(--accent); }
+    .msg.error { color: #c0392b; }
+
+    /* Teams table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #eee; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Danger zone */
+    .danger-zone { border: 1px solid #f5c6cb; border-radius: 8px; padding: 1rem 1.25rem; background: #fff5f5; }
+    .danger-zone p { font-size: 13px; color: #721c24; margin-bottom: 12px; }
+    :root { --accent: #3a8fc1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><img id="eventLogo" src="/pickleball_logo.jpg" alt="" /><span id="eventName">2026 Pickleball Tournament Admin</span></h1>
+    <nav>
+      <a href="/">Public Site</a>
+      <a href="/bracket.html">Bracket</a>
+    </nav>
+  </header>
+
+  <!-- Login screen -->
+  <div class="login-wrap" id="loginWrap">
+    <div class="login-card">
+      <h2>Admin Login</h2>
+      <div class="form-row">
+        <label>Password</label>
+        <input type="password" id="pwInput" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()" />
+      </div>
+      <button class="btn btn-primary" onclick="login()">Login</button>
+      <div class="msg error" id="loginMsg"></div>
+    </div>
+  </div>
+
+  <!-- Admin panel -->
+  <div class="page" id="adminPanel" style="display:none">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('teams')">Teams</div>
+      <div class="tab" onclick="showTab('notify')">Send Texts</div>
+      <div class="tab" onclick="showTab('bracket')">Create Bracket</div>
+      <div class="tab" onclick="showTab('scores')">View Scores</div>
+      <div class="tab" onclick="showTab('view-bracket')">View Bracket</div>
+      <div class="tab" onclick="showTab('pool-play')">Pool Play</div>
+    </div>
+
+    <!-- Teams panel -->
+    <div class="panel active" id="panel-teams">
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:1rem">Registered Teams</h2>
+        <div id="teamsTable">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Notify panel -->
+    <div class="panel" id="panel-notify">
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:.5rem">Send Payment Request</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:1.25rem">
+          Sends a text to all registered teams with a Venmo payment link for the $40 entry fee.
+        </p>
+        <div style="background:#f0f4f8;border-radius:8px;padding:12px;font-size:13px;color:#555;margin-bottom:1.25rem">
+          <strong>Message preview:</strong><br/>
+          <span id="notifyPreview">Loading...</span>
+        </div>
+        <button class="btn btn-primary" onclick="sendPaymentTexts()">Send Texts to All Teams</button>
+        <div class="msg" id="notifyMsg"></div>
+        <div id="notifyResults" style="margin-top:1rem"></div>
+      </div>
+    </div>
+
+    <!-- Bracket panel -->
+    <div class="panel" id="panel-bracket">
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:.5rem">Create Tournament Bracket</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:1.25rem">
+          This randomly seeds all registered teams into a double elimination bracket. The bracket size is automatically chosen based on team count (8, 16, 32, 64, or 128). Byes are added automatically for empty slots. <strong>This action cannot be undone</strong> — registration will close.
+        </p>
+        <div id="bracketSizeNote" style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:1rem"></div>
+        <button class="btn btn-primary" id="createBtn" onclick="createBracket()">Create Bracket</button>
+        <div class="msg" id="bracketMsg"></div>
+      </div>
+      <div class="card danger-zone">
+        <p><strong>Reset tournament:</strong> Deletes all matches and reopens registration. Use only if starting over.</p>
+        <button class="btn btn-danger" onclick="resetBracket()">Reset Bracket & Reopen Registration</button>
+        <div class="msg" id="resetMsg"></div>
+      </div>
+    </div>
+
+    <!-- View Bracket panel -->
+    <div class="panel" id="panel-view-bracket">
+      <iframe src="/bracket.html?mode=admin" style="width:100%;height:80vh;border:none;border-radius:8px"></iframe>
+    </div>
+
+    <!-- Pool Play panel -->
+    <div class="panel" id="panel-pool-play">
+
+      <!-- Create schedule -->
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:.5rem">Create Pool Play Schedule</h2>
+        <p style="font-size:13px;color:#888;margin-bottom:1.25rem">
+          Randomly splits all registered teams into <strong>Pool A</strong> and <strong>Pool B</strong>, then generates a round-robin schedule within each pool using the circle method. With 26 teams (13 per pool) and 6 courts per pool, 6 rounds guarantees every team plays 5–6 games. <strong>This closes registration.</strong>
+        </p>
+        <div id="poolCreateNote" style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:1rem"></div>
+        <div class="form-grid" style="max-width:360px;margin-bottom:1.25rem">
+          <div>
+            <label>Number of Rounds</label>
+            <select id="rrRounds">
+              <option value="6">6 rounds (recommended)</option>
+              <option value="7">7 rounds</option>
+              <option value="5">5 rounds</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="createPoolBtn" onclick="createPoolPlay()">Create Pool Play Schedule</button>
+        <div class="msg" id="poolPlayMsg"></div>
+      </div>
+
+      <!-- Score entry by round -->
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:.75rem">Enter Scores by Round</h2>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
+          <label style="margin:0;white-space:nowrap">Round:</label>
+          <select id="scoreRound" onchange="loadRoundScores()" style="width:auto;min-width:130px">
+            <option>— no schedule yet —</option>
+          </select>
+          <button class="btn btn-primary" style="font-size:12px;padding:6px 14px" onclick="loadRoundScores()">Refresh</button>
+        </div>
+        <div id="roundScoreTable" style="font-size:13px;color:#aaa">Generate a schedule first.</div>
+      </div>
+
+      <!-- Pool standings summary -->
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:.75rem">Current Standings</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem" id="adminStandings">
+          <div style="color:#aaa;font-size:13px">Generate a schedule to see standings.</div>
+        </div>
+        <div style="margin-top:1rem">
+          <a href="/roundrobin.html" target="_blank" style="font-size:13px;color:var(--accent)">Open public standings page →</a>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="card danger-zone">
+        <p><strong>Reset pool play:</strong> Deletes all pool matches and pool assignments. Registration stays open.</p>
+        <button class="btn btn-danger" onclick="resetPoolPlay()">Reset Pool Play</button>
+        <div class="msg" id="poolResetMsg"></div>
+      </div>
+    </div>
+
+    <!-- View Scores panel -->
+    <div class="panel" id="panel-scores">
+      <div class="card">
+        <h2 style="font-size:16px;margin-bottom:1rem">Completed Match Scores</h2>
+        <div id="scoresTable">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminPw = ''
+
+    function esc(s) { return !s ? '' : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+    async function applyConfig() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json())
+        document.title = cfg.eventName + ' — Admin'
+        document.getElementById('eventName').textContent = cfg.eventName + ' Admin'
+        if (cfg.logo) { const img = document.getElementById('eventLogo'); img.src = cfg.logo; img.style.display = '' }
+        if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+        const fee = cfg.entryFee || 0
+        const venmo = cfg.venmoHandle ? `venmo.com/${cfg.venmoHandle}` : '(Venmo not configured)'
+        document.getElementById('notifyPreview').textContent =
+          `Hi! You're registered for the ${cfg.eventName}. Entry fee is $${fee}/team ($${Math.round(fee/2)}/person). Please pay via Venmo: ${venmo}`
+      } catch (e) {}
+    }
+
+    applyConfig()
+
+    // Auto-login if password is already in sessionStorage
+    ;(async () => {
+      const saved = sessionStorage.getItem('adminPw')
+      if (!saved) return
+      const res = await fetch('/api/matches', { headers: { 'x-admin-password': saved } })
+      if (res.status === 401) { sessionStorage.removeItem('adminPw'); return }
+      adminPw = saved
+      document.getElementById('loginWrap').style.display = 'none'
+      document.getElementById('adminPanel').style.display = 'block'
+      loadAll()
+    })()
+
+    async function login() {
+      const pw = document.getElementById('pwInput').value
+      const res = await fetch('/api/matches', { headers: { 'x-admin-password': pw } })
+      if (res.status === 401) {
+        document.getElementById('loginMsg').textContent = 'Incorrect password.'
+        return
+      }
+      adminPw = pw
+      sessionStorage.setItem('adminPw', pw)
+      document.getElementById('loginWrap').style.display = 'none'
+      document.getElementById('adminPanel').style.display = 'block'
+      loadAll()
+    }
+
+    function showTab(name) {
+      const tabNames = ['teams','notify','bracket','scores','view-bracket','pool-play']
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', tabNames[i] === name)
+      })
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+      document.getElementById('panel-' + name).classList.add('active')
+      if (name === 'bracket') updateBracketSizeNote()
+      if (name === 'scores') loadScores()
+      if (name === 'view-bracket') {
+        const iframe = document.querySelector('#panel-view-bracket iframe')
+        iframe.src = iframe.src  // force reload
+      }
+      if (name === 'pool-play') loadPoolPlayPanel()
+    }
+
+    function getBracketSize(count) {
+      return [8, 16, 32, 64, 128].find(s => s >= count) || 128
+    }
+
+    async function updateBracketSizeNote() {
+      const res = await fetch('/api/teams')
+      const teams = await res.json()
+      const size = getBracketSize(teams.length)
+      const note = document.getElementById('bracketSizeNote')
+      if (note) note.textContent = `${teams.length} teams registered → will create a ${size}-team bracket with ${size - teams.length} bye(s)`
+    }
+
+    async function sendPaymentTexts() {
+      const msg = document.getElementById('notifyMsg')
+      const results = document.getElementById('notifyResults')
+      if (!confirm('Send payment request texts to all registered teams?')) return
+      msg.className = 'msg'; msg.textContent = 'Sending...'; results.innerHTML = ''
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw }
+      })
+      const data = await res.json()
+      if (!res.ok) { msg.className = 'msg error'; msg.textContent = data.error; return }
+      msg.className = 'msg success'
+      msg.textContent = `✓ Sent: ${data.sent} | Failed: ${data.failed} | Skipped (no phone): ${data.skipped}`
+      if (data.sentList?.length) {
+        results.innerHTML = '<p style="font-size:12px;font-weight:600;margin-bottom:6px">Successfully texted:</p>' +
+          data.sentList.map(t => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0">${esc(t.name)} — ${esc(t.phone)}</div>`).join('')
+      }
+      if (data.failedList?.length) {
+        results.innerHTML += '<p style="font-size:12px;font-weight:600;margin:10px 0 6px;color:#c0392b">Failed:</p>' +
+          data.failedList.map(t => `<div style="font-size:12px;color:#c0392b;padding:4px 0">${esc(t.name)} — ${esc(t.phone)}</div>`).join('')
+      }
+    }
+
+    async function textOne(teamId) {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ team_id: teamId })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.sent) alert('Failed to send text.')
+      else alert('✓ Text sent!')
+    }
+
+    async function togglePaid(teamId, field, value) {
+      await fetch(`/api/teams?id=${teamId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ [field]: value })
+      })
+    }
+
+    async function loadAll() {
+      loadTeams()
+    }
+
+    async function loadTeams() {
+      const res = await fetch('/api/teams')
+      const teams = await res.json()
+      const div = document.getElementById('teamsTable')
+      if (!teams.length) { div.innerHTML = '<p style="color:#aaa;font-size:14px">No teams registered.</p>'; return }
+      div.innerHTML = `<table>
+        <thead><tr><th>#</th><th>Team</th><th>Player 1</th><th>P1 Paid</th><th>Player 2</th><th>P2 Paid</th><th>Phone</th><th>Registered</th><th></th></tr></thead>
+        <tbody>${teams.map((t, i) => `
+          <tr>
+            <td>${i+1}</td>
+            <td><strong>${esc(t.name)}</strong></td>
+            <td>${esc(t.player1)}</td>
+            <td style="text-align:center"><input type="checkbox" ${t.paid1 ? 'checked' : ''} onchange="togglePaid('${t.id}', 'paid1', this.checked)" /></td>
+            <td>${esc(t.player2) || '<span style="color:#aaa">TBD</span>'}</td>
+            <td style="text-align:center"><input type="checkbox" ${t.paid2 ? 'checked' : ''} onchange="togglePaid('${t.id}', 'paid2', this.checked)" /></td>
+            <td>${esc(t.phone)}</td>
+            <td>${new Date(t.registered_at).toLocaleDateString()}</td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-primary" style="font-size:11px;padding:4px 10px" onclick="textOne('${t.id}')">Text</button>
+              <button class="btn btn-danger" onclick="deleteTeam('${t.id}','${esc(t.name)}')">Remove</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`
+    }
+
+    async function deleteTeam(id, name) {
+      if (!confirm(`Remove team "${name}"?`)) return
+      const res = await fetch(`/api/teams?id=${id}`, {
+        method: 'DELETE', headers: { 'x-admin-password': adminPw }
+      })
+      if (res.ok) loadTeams()
+      else { const d = await res.json(); alert(d.error) }
+    }
+
+    async function createBracket() {
+      if (!confirm('Create the bracket? This will close registration and cannot be undone.')) return
+      const btn = document.getElementById('createBtn')
+      const msg = document.getElementById('bracketMsg')
+      btn.disabled = true; msg.textContent = ''
+      try {
+        const res = await fetch('/api/matches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw }
+        })
+        const data = await res.json()
+        if (!res.ok) { msg.className = 'msg error'; msg.textContent = data.error; btn.disabled = false }
+        else { showTab('view-bracket') }
+      } catch (e) { msg.className = 'msg error'; msg.textContent = 'Network error: ' + e.message; btn.disabled = false }
+    }
+
+    async function resetBracket() {
+      if (!confirm('Reset the bracket and reopen registration? All match data will be lost.')) return
+      const msg = document.getElementById('resetMsg')
+      // Delete all matches and reset setting
+      const res = await fetch('/api/matches?action=reset', {
+        method: 'DELETE',
+        headers: { 'x-admin-password': adminPw }
+      })
+      if (res.ok) { msg.className = 'msg success'; msg.textContent = '✓ Reset complete.' }
+      else { const d = await res.json(); msg.className = 'msg error'; msg.textContent = d.error }
+    }
+
+    // ── Pool Play ──────────────────────────────────────────────────────────────
+
+    async function loadPoolPlayPanel() {
+      // Update the create-note with current team count
+      try {
+        const teams = await fetch('/api/teams').then(r => r.json())
+        const note = document.getElementById('poolCreateNote')
+        if (note) {
+          const half = Math.ceil(teams.length / 2)
+          note.textContent = `${teams.length} teams registered → Pool A: ${half}, Pool B: ${teams.length - half}`
+        }
+      } catch (e) {}
+
+      // Load schedule data
+      try {
+        const data = await fetch('/api/schedule').then(r => r.json())
+        const matches = data.matches || []
+        const standings = data.standings || {}
+
+        // Populate round selector
+        const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b)
+        const sel = document.getElementById('scoreRound')
+        if (rounds.length) {
+          sel.innerHTML = rounds.map(r => `<option value="${r}">Round ${r}</option>`).join('')
+          loadRoundScores()
+        } else {
+          sel.innerHTML = '<option>— no schedule yet —</option>'
+          document.getElementById('roundScoreTable').textContent = 'Generate a schedule first.'
+        }
+
+        // Render mini standings
+        renderAdminStandings(standings)
+      } catch (e) {}
+    }
+
+    function renderAdminStandings(standings) {
+      const container = document.getElementById('adminStandings')
+      if (!container) return
+      const renderPool = (pool, label) => {
+        const teams = standings[pool] || []
+        if (!teams.length) return `<div><strong style="font-size:13px">Pool ${label}</strong><p style="color:#aaa;font-size:13px;margin-top:.5rem">No teams yet.</p></div>`
+        return `<div>
+          <strong style="font-size:13px;color:${pool==='A'?'var(--accent)':'#e67e22'}">Pool ${label}</strong>
+          <table style="margin-top:.5rem;font-size:12px">
+            <thead><tr><th style="text-align:left;padding:4px 6px 4px 0;color:#aaa;font-size:10px;text-transform:uppercase">#</th>
+              <th style="text-align:left;padding:4px 6px;color:#aaa;font-size:10px;text-transform:uppercase">Team</th>
+              <th style="padding:4px 6px;color:#aaa;font-size:10px;text-transform:uppercase">W</th>
+              <th style="padding:4px 6px;color:#aaa;font-size:10px;text-transform:uppercase">L</th>
+              <th style="padding:4px 6px;color:#aaa;font-size:10px;text-transform:uppercase">+/-</th></tr></thead>
+            <tbody>${teams.map((t, i) => {
+              const diff = t.PF - t.PA
+              return `<tr>
+                <td style="color:#bbb;padding:4px 6px 4px 0">${i+1}</td>
+                <td style="padding:4px 6px;font-weight:600">${esc(t.name)}</td>
+                <td style="padding:4px 6px;color:#2d6a2d;font-weight:700">${t.W}</td>
+                <td style="padding:4px 6px;color:#888">${t.L}</td>
+                <td style="padding:4px 6px;color:${diff>=0?'#2d6a2d':'#c0392b'};font-weight:600">${diff>=0?'+':''}${diff}</td>
+              </tr>`
+            }).join('')}</tbody>
+          </table>
+        </div>`
+      }
+      container.innerHTML = renderPool('A', 'A') + renderPool('B', 'B')
+    }
+
+    async function createPoolPlay() {
+      const rounds = parseInt(document.getElementById('rrRounds').value)
+      if (!confirm(`Create pool play with ${rounds} rounds? This will randomly split teams into two pools and close registration.`)) return
+      const btn = document.getElementById('createPoolBtn')
+      const msg = document.getElementById('poolPlayMsg')
+      btn.disabled = true
+      msg.textContent = ''
+      try {
+        const res = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+          body: JSON.stringify({ rounds })
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          msg.className = 'msg error'; msg.textContent = data.error
+        } else {
+          msg.className = 'msg success'
+          msg.textContent = `✓ Schedule created! Pool A: ${data.poolA} teams, Pool B: ${data.poolB} teams, ${data.matchCount} total matches across ${data.rounds} rounds.`
+          loadPoolPlayPanel()
+        }
+      } catch (e) {
+        msg.className = 'msg error'; msg.textContent = 'Network error: ' + e.message
+      }
+      btn.disabled = false
+    }
+
+    async function loadRoundScores() {
+      const sel = document.getElementById('scoreRound')
+      const round = parseInt(sel.value)
+      if (isNaN(round)) return
+      const div = document.getElementById('roundScoreTable')
+      div.textContent = 'Loading...'
+
+      try {
+        const data = await fetch('/api/schedule').then(r => r.json())
+        const matches = (data.matches || []).filter(m => m.round === round && !m.is_bye)
+
+        if (!matches.length) {
+          div.innerHTML = '<p style="color:#aaa">No matches for this round.</p>'
+          return
+        }
+
+        div.innerHTML = `<table>
+          <thead>
+            <tr>
+              <th>Pool</th>
+              <th>Team 1</th>
+              <th style="width:64px;text-align:center">Score</th>
+              <th style="width:16px;text-align:center;color:#ccc">vs</th>
+              <th style="width:64px;text-align:center">Score</th>
+              <th>Team 2</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${matches.map(m => {
+              const done = m.status === 'complete'
+              const poolColor = m.bracket === 'A' ? 'var(--accent)' : '#e67e22'
+              const poolBg = m.bracket === 'A' ? '#deeef8' : '#fde8d0'
+              return `<tr>
+                <td><span style="background:${poolBg};color:${poolColor};border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">Pool ${esc(m.bracket)}</span></td>
+                <td style="font-weight:600">${esc(m.team1?.name || '?')}</td>
+                <td style="text-align:center">
+                  <input type="number" min="0" max="25" id="s1_${m.id}"
+                    style="width:54px;text-align:center;padding:5px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-weight:600"
+                    value="${m.score1 ?? ''}" placeholder="0" />
+                </td>
+                <td style="text-align:center;color:#ccc;font-size:11px">vs</td>
+                <td style="text-align:center">
+                  <input type="number" min="0" max="25" id="s2_${m.id}"
+                    style="width:54px;text-align:center;padding:5px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-weight:600"
+                    value="${m.score2 ?? ''}" placeholder="0" />
+                </td>
+                <td style="font-weight:600">${esc(m.team2?.name || '?')}</td>
+                <td style="text-align:right">
+                  ${done
+                    ? `<span style="color:#2d6a2d;font-size:11px;font-weight:700">✓ Done</span>
+                       <button class="btn" onclick="savePoolScore(${m.id})"
+                         style="font-size:10px;padding:3px 8px;background:#f0f0f0;color:#555;margin-left:4px">Edit</button>`
+                    : `<button class="btn btn-primary" onclick="savePoolScore(${m.id})"
+                         style="font-size:12px;padding:5px 12px">Save</button>`}
+                </td>
+              </tr>`
+            }).join('')}
+          </tbody>
+        </table>`
+
+        // Also refresh standings after loading scores
+        renderAdminStandings(data.standings || {})
+      } catch (e) {
+        div.textContent = 'Error loading matches.'
+      }
+    }
+
+    async function savePoolScore(matchId) {
+      const s1 = parseInt(document.getElementById('s1_' + matchId)?.value)
+      const s2 = parseInt(document.getElementById('s2_' + matchId)?.value)
+      if (isNaN(s1) || isNaN(s2)) { alert('Enter both scores.'); return }
+      if (s1 === s2) { alert('Scores cannot be tied.'); return }
+      const res = await fetch('/api/schedule', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPw },
+        body: JSON.stringify({ match_id: matchId, score1: s1, score2: s2 })
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || 'Error saving score.'); return }
+      loadRoundScores()
+    }
+
+    async function resetPoolPlay() {
+      if (!confirm('Reset pool play? This deletes all match data and pool assignments. Teams stay registered.')) return
+      const msg = document.getElementById('poolResetMsg')
+      const res = await fetch('/api/schedule', { method: 'DELETE', headers: { 'x-admin-password': adminPw } })
+      if (res.ok) {
+        msg.className = 'msg success'; msg.textContent = '✓ Reset complete.'
+        loadPoolPlayPanel()
+      } else {
+        const d = await res.json()
+        msg.className = 'msg error'; msg.textContent = d.error
+      }
+    }
+
+    // ── Scores (bracket) ───────────────────────────────────────────────────────
+
+    async function loadScores() {
+      const res = await fetch('/api/matches')
+      if (!res.ok) return
+      const matches = await res.json()
+      const div = document.getElementById('scoresTable')
+      const done = matches.filter(m => m.status === 'complete' && !m.is_bye && m.score1 != null)
+        .sort((a, b) => a.bracket.localeCompare(b.bracket) || a.round - b.round || a.position - b.position)
+      if (!done.length) { div.innerHTML = '<p style="color:#aaa;font-size:14px">No scores recorded yet.</p>'; return }
+      div.innerHTML = `<table>
+        <thead><tr><th>Match</th><th>Winner</th><th>Score</th><th>Loser</th></tr></thead>
+        <tbody>${done.map(m => {
+          const bracketLabel = m.bracket === 'W' ? 'Main' : 'Consolation'
+          const winner = m.winner_id === m.team1_id ? m.team1 : m.team2
+          const loser  = m.winner_id === m.team1_id ? m.team2 : m.team1
+          const s1 = m.winner_id === m.team1_id ? m.score1 : m.score2
+          const s2 = m.winner_id === m.team1_id ? m.score2 : m.score1
+          return `<tr>
+            <td style="font-weight:600">${bracketLabel} R${m.round} #${m.position+1}</td>
+            <td style="font-weight:600;color:#2d6a2d">${esc(winner?.name)}</td>
+            <td>${s1} – ${s2}</td>
+            <td style="color:#888">${esc(loser?.name)}</td>
+          </tr>`
+        }).join('')}
+        </tbody>
+      </table>`
+    }
+  </script>
+</body>
+</html>

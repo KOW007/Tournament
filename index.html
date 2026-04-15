@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2026 Pickleball Tournament</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background: #f0f4f8; color: #0f0f0f; min-height: 100vh; }
+    header { background: #0f0f0f; color: white; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
+    header h1 img { height: 64px; width: auto; }
+    nav a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 500; margin-left: 1.5rem; }
+    nav a:hover { color: white; }
+    .page { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    h2 { font-size: 20px; font-weight: 700; color: #0f0f0f; margin-bottom: 1.25rem; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    input { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(58,143,193,0.15); }
+    .form-row { margin-bottom: 1rem; }
+    .btn { display: inline-block; padding: 10px 24px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #2a7aaa; }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+    .msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .msg.success { color: var(--accent); }
+    .msg.error { color: #c0392b; }
+    .team-list { display: flex; flex-direction: column; gap: 8px; }
+    .team-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid #eee; border-radius: 8px; }
+    .team-name { font-weight: 600; font-size: 14px; }
+    .team-players { font-size: 12px; color: #888; margin-top: 2px; }
+    .team-num { font-size: 12px; color: #aaa; margin-left: 8px; }
+    .badge { display: inline-block; background: #deeef8; color: var(--accent); border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; margin-bottom: 1rem; }
+    .closed-banner { background: #fff3cd; border: 1px solid #f0ad4e; border-radius: 8px; padding: 12px 16px; font-size: 14px; color: #856404; margin-bottom: 1.25rem; }
+    .empty { color: #aaa; font-size: 14px; text-align: center; padding: 2rem; }
+    .btn-join { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-join:hover { background: #2a7aaa; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 1.5rem; width: 320px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .modal h3 { font-size: 16px; margin-bottom: 1rem; }
+    .modal-close { float: right; background: none; border: none; font-size: 18px; cursor: pointer; color: #aaa; }
+    :root { --accent: #3a8fc1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><img id="eventLogo" src="/pickleball_logo.jpg" alt="" /><span id="eventName">2026 Pickleball Tournament</span></h1>
+    <nav>
+      <a href="/">Register</a>
+      <a href="/bracket.html">Bracket</a>
+      <a href="/admin.html" style="font-size:11px;opacity:0.5">Admin</a>
+    </nav>
+  </header>
+
+  <div class="page">
+    <div class="grid">
+      <!-- Registration -->
+      <div>
+        <div class="card">
+          <h2>Register Your Team</h2>
+          <div id="closedBanner" class="closed-banner" style="display:none">
+            Registration is closed — the tournament bracket has been created.
+          </div>
+          <div id="regForm">
+            <div class="form-row">
+              <label>Team Name</label>
+              <input id="teamName" type="text" placeholder="e.g. Dink Dynasty" maxlength="60" />
+            </div>
+            <div class="form-row">
+              <label>Player 1</label>
+              <input id="player1" type="text" placeholder="First & last name" maxlength="60" />
+            </div>
+            <div class="form-row">
+              <label>Partner Status</label>
+              <select id="partnerStatus" onchange="togglePlayer2()">
+                <option value="has_partner">I have a partner</option>
+                <option value="signing_up_later">My partner will sign up later</option>
+                <option value="need_partner">Looking for a partner</option>
+              </select>
+            </div>
+            <div class="form-row" id="player2Row">
+              <label>Player 2</label>
+              <input id="player2" type="text" placeholder="First & last name" maxlength="60" />
+            </div>
+            <div class="form-row">
+              <label>Phone Number</label>
+              <input id="phone" type="tel" placeholder="e.g. 512-555-1234" maxlength="20" />
+            </div>
+            <button class="btn btn-primary" id="registerBtn" onclick="register()">Register Team</button>
+            <div class="msg" id="regMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teams List -->
+      <div>
+        <div class="card">
+          <h2>Registered Teams</h2>
+          <div id="teamCount" class="badge">Loading...</div>
+          <div id="teamList" class="team-list">
+            <div class="empty">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Team Modal -->
+  <div class="modal-overlay" id="joinModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeJoinModal()">×</button>
+      <h3>Join Team: <span id="joinTeamName"></span></h3>
+      <div class="form-row">
+        <label>Your Name</label>
+        <input id="joinName" type="text" placeholder="First & last name" maxlength="60" />
+      </div>
+      <div class="form-row">
+        <label>Your Phone</label>
+        <input id="joinPhone" type="tel" placeholder="e.g. 512-555-1234" maxlength="20" />
+      </div>
+      <button class="btn btn-primary" onclick="submitJoin()">Join Team</button>
+      <div class="msg" id="joinMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    async function applyConfig() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json())
+        document.title = cfg.eventName
+        document.getElementById('eventName').textContent = cfg.eventName
+        if (cfg.logo) { const img = document.getElementById('eventLogo'); img.src = cfg.logo; img.style.display = '' }
+        if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+      } catch (e) {}
+    }
+
+    applyConfig()
+
+    async function loadTeams() {
+      const res = await fetch('/api/teams')
+      const teams = await res.json()
+
+      document.getElementById('teamCount').textContent = `${teams.length} team${teams.length !== 1 ? 's' : ''} registered`
+
+      const list = document.getElementById('teamList')
+      if (!teams.length) {
+        list.innerHTML = '<div class="empty">No teams registered yet. Be the first!</div>'
+        return
+      }
+      list.innerHTML = teams.map((t, i) => `
+        <div class="team-item">
+          <div>
+            <div class="team-name">${esc(t.name)}${partnerBadge(t)}</div>
+            <div class="team-players">${esc(t.player1)}${t.player2 ? ' &amp; ' + esc(t.player2) : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${t.partner_status === 'need_partner' ? `<button class="btn-join" onclick="openJoinModal('${t.id}','${esc(t.name)}')">Join Team</button>` : ''}
+            <span class="team-num">#${i + 1}</span>
+          </div>
+        </div>
+      `).join('')
+    }
+
+    async function checkStatus() {
+      const res = await fetch('/api/teams')
+      // We check via a test POST — simpler: just check bracket_created via teams endpoint
+      // We'll detect closed state when registration fails
+    }
+
+    async function register() {
+      const btn = document.getElementById('registerBtn')
+      const msg = document.getElementById('regMsg')
+      const name = document.getElementById('teamName').value.trim()
+      const p1 = document.getElementById('player1').value.trim()
+      const partnerStatus = document.getElementById('partnerStatus').value
+      const p2 = partnerStatus === 'has_partner' ? document.getElementById('player2').value.trim() : ''
+      const phone = document.getElementById('phone').value.trim()
+
+      if (!name || !p1 || !phone) {
+        msg.className = 'msg error'; msg.textContent = 'Please fill in all fields.'; return
+      }
+      if (partnerStatus === 'has_partner' && !p2) {
+        msg.className = 'msg error'; msg.textContent = 'Please enter your partner\'s name.'; return
+      }
+
+      btn.disabled = true; msg.textContent = ''
+
+      const res = await fetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, player1: p1, player2: p2, phone, partner_status: partnerStatus })
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        msg.className = 'msg error'
+        msg.textContent = data.error
+        if (data.error.includes('closed')) {
+          document.getElementById('closedBanner').style.display = 'block'
+          document.getElementById('regForm').style.display = 'none'
+        }
+      } else {
+        msg.className = 'msg success'
+        msg.textContent = `✓ "${data.name}" registered!`
+        document.getElementById('teamName').value = ''
+        document.getElementById('player1').value = ''
+        document.getElementById('player2').value = ''
+        document.getElementById('phone').value = ''
+        document.getElementById('partnerStatus').value = 'has_partner'
+        togglePlayer2()
+        loadTeams()
+      }
+      btn.disabled = false
+    }
+
+    let joinTeamId = null
+
+    function openJoinModal(id, name) {
+      joinTeamId = id
+      document.getElementById('joinTeamName').textContent = name
+      document.getElementById('joinName').value = ''
+      document.getElementById('joinPhone').value = ''
+      document.getElementById('joinMsg').textContent = ''
+      document.getElementById('joinModal').classList.add('open')
+    }
+
+    function closeJoinModal() {
+      document.getElementById('joinModal').classList.remove('open')
+    }
+
+    async function submitJoin() {
+      const player2 = document.getElementById('joinName').value.trim()
+      const phone2 = document.getElementById('joinPhone').value.trim()
+      const msg = document.getElementById('joinMsg')
+      if (!player2 || !phone2) { msg.className = 'msg error'; msg.textContent = 'Please fill in all fields.'; return }
+      const res = await fetch('/api/teams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: joinTeamId, player2, phone2 })
+      })
+      const data = await res.json()
+      if (!res.ok) { msg.className = 'msg error'; msg.textContent = data.error; return }
+      msg.className = 'msg success'; msg.textContent = '✓ You have joined the team!'
+      setTimeout(() => { closeJoinModal(); loadTeams() }, 1500)
+    }
+
+    function togglePlayer2() {
+      const status = document.getElementById('partnerStatus').value
+      document.getElementById('player2Row').style.display = status === 'has_partner' ? 'block' : 'none'
+    }
+
+    function partnerBadge(t) {
+      if (t.partner_status === 'need_partner') return ' <span style="background:#fff3cd;color:#856404;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600">Looking for partner</span>'
+      if (t.partner_status === 'signing_up_later') return ' <span style="background:#e8f0fe;color:#3a5fb8;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:600">Partner TBD</span>'
+      return ''
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    }
+
+    loadTeams()
+    setInterval(loadTeams, 15000)
+  </script>
+</body>
+</html>
