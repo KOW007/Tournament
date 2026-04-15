@@ -650,6 +650,9 @@
       if (!res.ok) { msg.className = 'msg error'; msg.textContent = data.error; return }
       msg.className = 'msg success'
       msg.textContent = `✓ Sent: ${data.sent} | Failed: ${data.failed} | Skipped: ${data.skipped}`
+      if (data.failedList?.length) {
+        msg.textContent += ' — ' + data.failedList.map(t => `${esc(t.name)}: ${esc(t.error || 'unknown error')}`).join('; ')
+      }
     }
 
     async function textRoundLinks() {
