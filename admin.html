@@ -289,9 +289,8 @@
       if (name === 'scores') loadScores()
       if (name === 'view-bracket') {
         const iframe = document.getElementById('bracketIframe')
-        fetch('/api/schedule').then(r => r.json()).then(data => {
-          const isPoolPlay = (data.matches || []).some(m => m.bracket === 'A' || m.bracket === 'B')
-          iframe.src = isPoolPlay ? '/roundrobin.html' : '/bracket.html?mode=admin'
+        fetch('/api/config').then(r => r.json()).then(cfg => {
+          iframe.src = cfg.tournamentFormat === 'pool_play' ? '/roundrobin.html' : '/bracket.html?mode=admin'
         }).catch(() => { iframe.src = '/bracket.html?mode=admin' })
       }
       if (name === 'pool-play') loadPoolPlayPanel()
