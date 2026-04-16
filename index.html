@@ -74,6 +74,16 @@
               <label>Player 1</label>
               <input id="player1" type="text" placeholder="First & last name" maxlength="60" />
             </div>
+            <div class="form-row shirt-size-row" id="shirt1Row" style="display:none">
+              <label>Player 1 Shirt Size</label>
+              <select id="shirt1">
+                <option value="">— Select size —</option>
+                <option>Small</option>
+                <option>Medium</option>
+                <option>Large</option>
+                <option>XL</option>
+              </select>
+            </div>
             <div class="form-row">
               <label>Partner Status</label>
               <select id="partnerStatus" onchange="togglePlayer2()">
@@ -85,6 +95,16 @@
             <div class="form-row" id="player2Row">
               <label>Player 2</label>
               <input id="player2" type="text" placeholder="First & last name" maxlength="60" />
+            </div>
+            <div class="form-row shirt-size-row" id="shirt2Row" style="display:none">
+              <label>Player 2 Shirt Size</label>
+              <select id="shirt2">
+                <option value="">— Select size —</option>
+                <option>Small</option>
+                <option>Medium</option>
+                <option>Large</option>
+                <option>XL</option>
+              </select>
             </div>
             <div class="form-row">
               <label>Phone Number</label>
@@ -141,6 +161,8 @@
         document.getElementById('eventName').textContent = cfg.eventName
         if (cfg.logo) { const img = document.getElementById('eventLogo'); img.src = cfg.logo; img.style.display = '' }
         if (cfg.accentColor) document.documentElement.style.setProperty('--accent', cfg.accentColor)
+        showShirtSizes = cfg.showShirtSizes || false
+        document.getElementById('shirt1Row').style.display = showShirtSizes ? 'block' : 'none'
         const navStandings = document.getElementById('navStandings')
         if (cfg.tournamentFormat === 'pool_play') {
           navStandings.href = '/roundrobin.html'
@@ -151,6 +173,8 @@
         }
       } catch (e) {}
     }
+
+    let showShirtSizes = false
 
     applyConfig()
 
@@ -193,6 +217,8 @@
       const partnerStatus = document.getElementById('partnerStatus').value
       const p2 = partnerStatus === 'has_partner' ? document.getElementById('player2').value.trim() : ''
       const phone = document.getElementById('phone').value.trim()
+      const shirt1 = showShirtSizes ? document.getElementById('shirt1').value : ''
+      const shirt2 = showShirtSizes && partnerStatus === 'has_partner' ? document.getElementById('shirt2').value : ''
 
       if (!name || !p1 || !phone) {
         msg.className = 'msg error'; msg.textContent = 'Please fill in all fields.'; return
@@ -207,6 +233,12 @@
       if (!document.getElementById('smsConsent').checked) {
         msg.className = 'msg error'; msg.textContent = 'Please agree to receive text messages to complete registration.'; return
       }
+      if (showShirtSizes && !shirt1) {
+        msg.className = 'msg error'; msg.textContent = 'Please select a shirt size for Player 1.'; return
+      }
+      if (showShirtSizes && partnerStatus === 'has_partner' && !shirt2) {
+        msg.className = 'msg error'; msg.textContent = 'Please select a shirt size for Player 2.'; return
+      }
 
       btn.disabled = true; msg.textContent = ''
 
@@ -214,7 +246,7 @@
         const res = await fetch('/api/teams', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, player1: p1, player2: p2, phone, partner_status: partnerStatus })
+          body: JSON.stringify({ name, player1: p1, player2: p2, phone, partner_status: partnerStatus, shirt1: shirt1 || null, shirt2: shirt2 || null })
         })
         const data = await res.json()
 
@@ -234,6 +266,8 @@
           document.getElementById('phone').value = ''
           document.getElementById('partnerStatus').value = 'has_partner'
           document.getElementById('smsConsent').checked = false
+          document.getElementById('shirt1').value = ''
+          document.getElementById('shirt2').value = ''
           togglePlayer2()
           loadTeams()
         }
@@ -277,7 +311,9 @@
 
     function togglePlayer2() {
       const status = document.getElementById('partnerStatus').value
-      document.getElementById('player2Row').style.display = status === 'has_partner' ? 'block' : 'none'
+      const hasPartner = status === 'has_partner'
+      document.getElementById('player2Row').style.display = hasPartner ? 'block' : 'none'
+      document.getElementById('shirt2Row').style.display = hasPartner && showShirtSizes ? 'block' : 'none'
     }
 
     function partnerBadge(t) {

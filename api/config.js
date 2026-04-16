@@ -8,5 +8,6 @@ module.exports = function handler(req, res) {
     venmoHandle:      process.env.VENMO_HANDLE       || '',
     entryFee:         parseInt(process.env.ENTRY_FEE || '0'),
     tournamentFormat: process.env.TOURNAMENT_FORMAT  || 'bracket',
+    showShirtSizes:   process.env.SHOW_SHIRT_SIZES   === 'true',
   })
 }
