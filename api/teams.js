@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
 
     const { data: team } = await supabase.from(`${T}_teams`).select('*').eq('id', team_id).single()
     if (!team) return res.status(404).json({ error: 'Team not found.' })
-    if (team.partner_status !== 'need_partner')
+    if (team.partner_status !== 'need_partner' && team.partner_status !== 'signing_up_later')
       return res.status(400).json({ error: 'This team is no longer looking for a partner.' })
 
     const { error } = await supabase.from(`${T}_teams`)

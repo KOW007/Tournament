@@ -196,7 +196,7 @@
             <div class="team-players">${esc(t.player1)}${t.player2 ? ' &amp; ' + esc(t.player2) : ''}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            ${t.partner_status === 'need_partner' ? `<button class="btn-join" onclick="openJoinModal('${t.id}','${esc(t.name)}')">Join Team</button>` : ''}
+            ${(t.partner_status === 'need_partner' || t.partner_status === 'signing_up_later') ? `<button class="btn-join" onclick="openJoinModal('${t.id}','${esc(t.name)}')">Join Team</button>` : ''}
             <span class="team-num">#${i + 1}</span>
           </div>
         </div>
