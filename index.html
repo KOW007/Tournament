@@ -140,6 +140,9 @@
     <div class="modal">
       <button class="modal-close" onclick="closeJoinModal()">×</button>
       <h3>Join Team: <span id="joinTeamName"></span></h3>
+      <div id="joinPartnerNote" style="display:none;background:#fff3cd;border:1px solid #f0ad4e;border-radius:8px;padding:10px 12px;font-size:13px;color:#856404;margin-bottom:1rem">
+        ⚠️ This partner has already agreed to play with me. Only join if you are the intended partner.
+      </div>
       <div class="form-row">
         <label>Your Name</label>
         <input id="joinName" type="text" placeholder="First & last name" maxlength="60" />
@@ -196,7 +199,7 @@
             <div class="team-players">${esc(t.player1)}${t.player2 ? ' &amp; ' + esc(t.player2) : ''}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            ${(t.partner_status === 'need_partner' || t.partner_status === 'signing_up_later') ? `<button class="btn-join" onclick="openJoinModal('${t.id}','${esc(t.name)}')">Join Team</button>` : ''}
+            ${(t.partner_status === 'need_partner' || t.partner_status === 'signing_up_later') ? `<button class="btn-join" onclick="openJoinModal('${t.id}','${esc(t.name)}','${t.partner_status}')">Join Team</button>` : ''}
             <span class="team-num">#${i + 1}</span>
           </div>
         </div>
@@ -280,12 +283,13 @@
 
     let joinTeamId = null
 
-    function openJoinModal(id, name) {
+    function openJoinModal(id, name, partnerStatus) {
       joinTeamId = id
       document.getElementById('joinTeamName').textContent = name
       document.getElementById('joinName').value = ''
       document.getElementById('joinPhone').value = ''
       document.getElementById('joinMsg').textContent = ''
+      document.getElementById('joinPartnerNote').style.display = partnerStatus === 'signing_up_later' ? 'block' : 'none'
       document.getElementById('joinModal').classList.add('open')
     }
 
