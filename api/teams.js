@@ -91,6 +91,10 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     const { id } = req.query
     if (!id) return res.status(400).json({ error: 'Team ID required' })
+    const { data: setting } = await supabase
+      .from(`${T}_settings`).select('value').eq('key', 'bracket_created').single()
+    if (setting?.value === 'true')
+      return res.status(400).json({ error: 'Cannot remove a team after the draw has been made.' })
     const { error } = await supabase.from(`${T}_teams`).delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
     return res.json({ success: true })
